@@ -1,0 +1,13 @@
+{
+  "IDX.aI.enableInlineCompletion": true,
+  "IDX.aI.enableCodebaseIndexing": true,
+  "prettier.tabWidth": 2,
+  "window.zoomLevel": 2,
+  "editor.formatOnSave": true,
+  "javascript.preferences.quoteStyle": "single",
+  "prettier.jsxSingleQuote": true,
+  "prettier.singleQuote": true,
+  "prettier.semi": false,
+  "security.workspace.trust.untrustedFiles": "open",
+  "prettier.printWidth": 100
+}
