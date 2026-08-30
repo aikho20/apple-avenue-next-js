@@ -3,20 +3,14 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useGetBannersQuery } from '@/store/action/bannerAction'
 
 type Banner = { _id: string; title: string; subtitle: string; image: string; link: string; order: number; active: boolean }
 
 export default function BannerSlider({ fallback }: { fallback?: React.ReactNode }) {
-  const [banners, setBanners] = useState<Banner[]>([])
+  const { data, isLoading: loading } = useGetBannersQuery({})
+  const banners: Banner[] = data?.banners || []
   const [idx, setIdx] = useState(0)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/banners')
-      .then((r) => r.json())
-      .then((d) => { setBanners(d.banners || []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
 
   useEffect(() => {
     if (banners.length <= 1) return

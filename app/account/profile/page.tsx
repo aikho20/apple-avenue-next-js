@@ -14,7 +14,7 @@ import {
 import { useToggle } from '@/hooks/useToggle'
 import { Edit, ImageIcon, StoreIcon } from 'lucide-react'
 import { ImageInitialValue } from '@/utils/validation/initialValues'
-import { useGetUserProfileQuery } from '@/store/action/accountAction'
+import { useGetUserProfileQuery, useDeleteAccountMutation } from '@/store/action/accountAction'
 import { Skeleton } from '@/components/ui/skeleton'
 import ProfilePhotoForm from '@/components/forms/profile-photo-form'
 import CoverPhotoForm from '@/components/forms/cover-photo-form'
@@ -37,24 +37,17 @@ function Profile() {
   const [value, toggle, setValue] = useToggle()
   const [value1, toggle1, setValue1] = useToggle()
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const { data, isLoading } = useGetUserProfileQuery({})
+  const [deleteAccount, { isLoading: deleting }] = useDeleteAccountMutation()
 
   const handleDelete = async () => {
-    setDeleting(true)
     try {
-      const res = await fetch('/api/account/delete', { method: 'POST' })
-      if (res.ok) {
-        toast.success('Account deleted')
-        await signOut({ callbackUrl: '/' })
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to delete')
-      }
-    } catch {
-      toast.error('Failed to delete')
+      await deleteAccount({}).unwrap()
+      toast.success('Account deleted')
+      await signOut({ callbackUrl: '/' })
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed to delete')
     }
-    setDeleting(false)
   }
   return (
     <div className="w-full flex flex-col gap-6">

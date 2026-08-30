@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import Image from 'next/image'
 import { Star, Search, Check, Eye } from 'lucide-react'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
+import { useUpdateProductMutation } from '@/store/action/productAction'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 
@@ -21,18 +22,15 @@ export default function FeaturedPage() {
     if (!query) return products
     return products.filter((p) => p.productName.toLowerCase().includes(query.toLowerCase()))
   }, [products, query])
+  const [updateProduct] = useUpdateProductMutation()
 
   const toggleFeatured = async (p: any) => {
-    const res = await fetch('/api/store/dashboard/product/update-product', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: p._id, isFeatured: !p.isFeatured }),
-    })
-    const d = await res.json()
-    if (res.ok) toast.success(!p.isFeatured ? 'Added to Featured — shows on landing page' : 'Removed from Featured')
-    else toast.error(d.error || 'Failed')
-    // refetch via invalidating Product tag would need RTK; simple reload
-    location.reload()
+    try {
+      await updateProduct({ _id: p._id, isFeatured: !p.isFeatured } as any).unwrap()
+      toast.success(!p.isFeatured ? 'Added to Featured — shows on landing page' : 'Removed from Featured')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   return (

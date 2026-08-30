@@ -61,6 +61,12 @@ export const accountApi = apiSlice.injectEndpoints({
         method: 'POST',
       }),
     }),
+    deleteAccount: builder.mutation({
+      query: () => ({
+        url: '/api/account/delete',
+        method: 'POST',
+      }),
+    }),
   }),
 })
 
@@ -73,4 +79,5 @@ export const {
   useUpdateProfileImageMutation,
   useGetUserProfileQuery,
   useGetUserOrderQuery,
+  useDeleteAccountMutation,
 } = accountApi

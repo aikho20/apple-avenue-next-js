@@ -1,7 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Clock, Package, ShoppingCart, Trash2, Pencil, Plus } from 'lucide-react'
+import { useGetActivityQuery } from '@/store/action/activityAction'
 
 type Activity = { _id: string; action: string; detail: string; createdAt: string }
 
@@ -14,15 +14,8 @@ const iconMap: Record<string, any> = {
 }
 
 export default function ActivityHistoryPage() {
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/store/dashboard/activity')
-      .then((r) => r.json())
-      .then((d) => setActivities(d.activities || []))
-      .finally(() => setLoading(false))
-  }, [])
+  const { data, isLoading: loading } = useGetActivityQuery({})
+  const activities: Activity[] = data?.activities || []
 
   return (
     <div className="w-full flex flex-col gap-4">

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import BannerSlider from '@/components/ui/banner-slider'
-import { useEffect, useState } from 'react'
+import { useGetCollectionsQuery } from '@/store/action/collectionAction'
 
 const features = [
   {
@@ -75,17 +75,10 @@ export default function Home() {
     [productData?.product],
   )
 
-  const [collections, setCollections] = useState<any[]>([])
-  useEffect(() => {
-    fetch('/api/collections')
-      .then((r) => r.json())
-      .then((d) =>
-        setCollections(
-          (d.collections || []).filter((c: any) => c.products && c.products.length > 0),
-        ),
-      )
-      .catch(() => {})
-  }, [])
+  const { data: collectionsData } = useGetCollectionsQuery({})
+  const collections = (collectionsData?.collections || []).filter(
+    (c: any) => c.products && c.products.length > 0,
+  )
 
   return (
     <div className='w-full bg-white'>
