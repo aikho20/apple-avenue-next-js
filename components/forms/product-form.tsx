@@ -149,13 +149,52 @@ export default function ProductForm({ action, initialValue, callback }: ProductP
               name='quantity'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity</FormLabel>
+                  <FormLabel>Quantity (Total Stock)</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type={'number'}
                       disabled={isUpdatingProduct || isAddingProduct}
                     />
+                  </FormControl>
+                  <FormMessage className='text-xs' />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='sku'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Auto if blank" disabled={isUpdatingProduct || isAddingProduct} />
+                  </FormControl>
+                  <FormMessage className='text-xs' />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='lowStockThreshold'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Low Stock Threshold</FormLabel>
+                  <FormControl>
+                    <Input {...field} type={'number'} disabled={isUpdatingProduct || isAddingProduct} />
+                  </FormControl>
+                  <FormMessage className='text-xs' />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='reservedStock'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reserved Stock</FormLabel>
+                  <FormControl>
+                    <Input {...field} type={'number'} disabled={isUpdatingProduct || isAddingProduct} />
                   </FormControl>
                   <FormMessage className='text-xs' />
                 </FormItem>

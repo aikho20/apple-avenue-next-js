@@ -39,7 +39,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   const rowModel = table?.getRowModel ? table.getRowModel() : { rows: [] }
   const rows = rowModel?.rows || []
   return (
-    <div className='rounded-md border'>
+    <div className='rounded-md border overflow-x-auto'>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

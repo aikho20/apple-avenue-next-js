@@ -15,6 +15,8 @@ import {
   Image as ImageLucide,
   Star,
   ShieldCheck,
+  Package,
+  Boxes,
 } from 'lucide-react'
 
 export const DASHBOARD_MENU = [
@@ -25,6 +27,11 @@ export const DASHBOARD_MENU = [
         title: 'Product',
         route: '/dashboard/products',
         icon: Tag,
+      },
+      {
+        title: 'Inventory',
+        route: '/dashboard/inventory',
+        icon: Boxes,
       },
       {
         title: 'Featured',

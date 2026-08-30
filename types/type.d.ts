@@ -114,6 +114,9 @@ export interface ProductFormProps {
   isFeatured?: boolean
   isDeal?: boolean
   specs?: PhoneSpecifications
+  sku?: string
+  reservedStock?: number
+  lowStockThreshold?: number
 }
 
 export interface ProductProps {

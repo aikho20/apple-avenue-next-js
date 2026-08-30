@@ -31,5 +31,5 @@ const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQuery
 export const apiSlice = createApi({
   baseQuery: baseQueryWithAuth,
   endpoints: (builder) => ({}),
-  tagTypes: ['Store', 'Product', 'Cart', 'Address', 'Account', 'Wishlist', 'Compare'],
+  tagTypes: ['Store', 'Product', 'Cart', 'Address', 'Account', 'Wishlist', 'Compare', 'Inventory', 'PriceHistory'],
 })

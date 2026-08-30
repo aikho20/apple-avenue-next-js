@@ -35,6 +35,9 @@ export const ProductSchema = z.object({
   isFeatured: z.boolean().optional().default(false),
   isDeal: z.boolean().optional().default(false),
   specs: z.any().optional(),
+  sku: z.string().optional(),
+  reservedStock: z.coerce.number().min(0).optional().default(0),
+  lowStockThreshold: z.coerce.number().min(0).optional().default(5),
 })
 export const AddressSchema = z.object({
   _id: z.string().optional(),

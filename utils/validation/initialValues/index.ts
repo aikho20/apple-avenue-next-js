@@ -31,6 +31,9 @@ export const ProductInitialValue = {
   status: '',
   isFeatured: false,
   isDeal: false,
+  sku: '',
+  reservedStock: 0,
+  lowStockThreshold: 5,
 }
 
 export const AddressInitailValue = {

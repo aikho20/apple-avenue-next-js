@@ -68,15 +68,35 @@ export async function POST(req: NextRequest) {
 
     const total: number = cartItems.reduce((acc: number, item: ProductCardProps) => acc + item.price * item.value, 0)
 
-    // Decrement inventory
+    // Decrement inventory with audit history (SALE)
     for (const item of userCart.cart) {
       const pid = (item as any)._id || (item as any).id
-      await Product.findByIdAndUpdate(pid, { $inc: { quantity: -Number((item as any).value) } })
+      const qty = Number((item as any).value)
+      const prod: any = await Product.findById(pid)
+      if (!prod) continue
+      const before = Number(prod.quantity || 0)
+      const after = Math.max(before - qty, 0)
+      await Product.findByIdAndUpdate(pid, { $inc: { quantity: -qty } })
       // Auto mark out of stock if quantity 0
       const p = await Product.findById(pid).select('quantity')
       if (p && p.quantity <= 0) {
         await Product.findByIdAndUpdate(pid, { status: 'Out of Stock' })
       }
+      try {
+        const InventoryTransaction = (await import('@/lib/model/inventoryTransaction.model')).default
+        await InventoryTransaction.create({
+          productId: pid,
+          merchant: userCart.merchant,
+          type: 'SALE',
+          quantityBefore: before,
+          quantityChange: -qty,
+          quantityAfter: after,
+          reason: `Sale - Order ${userCart._id || ''}`,
+          referenceId: '',
+          createdBy: user._id.toString(),
+          createdByName: user.name || user.email || 'Customer',
+        })
+      } catch {}
     }
 
     const newOrder = new Order({

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
-import { FaApple } from 'react-icons/fa'
+import Image from 'next/image'
 import { FiFacebook } from 'react-icons/fi'
 import { LinkedInLogoIcon } from '@radix-ui/react-icons'
 import { X } from 'lucide-react'
@@ -17,10 +17,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-3 lg:col-span-2 col-span-2 sm:col-span-3">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-[7px] bg-[#111111]">
-                <FaApple className="h-[18px] w-[18px] text-white" />
-              </div>
-              <span className="text-[16px] font-bold tracking-tight text-[#1D1D1F]">Apple Avenue</span>
+              <Image src="/icon.png" alt="Apple Avenue" width={140} height={32} className="h-8 w-auto object-contain" unoptimized />
             </Link>
             <p className="text-[12.5px] leading-[1.7] text-[#6E6E73] max-w-[300px]">
               Premium Apple, perfected. Certified iPhone, iPad, Mac, Watch and AirPods — authentic, warranty-backed. Single official store — every product, deal & service is admin-driven.
