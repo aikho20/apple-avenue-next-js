@@ -4,11 +4,17 @@ export const collectionApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getCollections: builder.query({
       query: () => ({ url: '/api/collections', method: 'GET' }),
-      providesTags: [{ type: 'Collection', id: 'LIST' }],
+      providesTags: (result: any) =>
+        result?.collections
+          ? [{ type: 'Collection', id: 'LIST' } as const, ...result.collections.map((c: any) => ({ type: 'Collection' as const, id: c._id }))]
+          : [{ type: 'Collection', id: 'LIST' } as const],
     }),
     getDashboardCollections: builder.query({
       query: () => ({ url: '/api/store/dashboard/collection', method: 'GET' }),
-      providesTags: [{ type: 'Collection', id: 'ADMIN' }],
+      providesTags: (result: any) =>
+        result?.collections
+          ? [{ type: 'Collection', id: 'ADMIN' } as const, ...result.collections.map((c: any) => ({ type: 'Collection' as const, id: c._id }))]
+          : [{ type: 'Collection', id: 'ADMIN' } as const],
     }),
     createCollection: builder.mutation({
       query: (body: { name: string; description?: string; image?: string }) => ({
@@ -24,14 +30,22 @@ export const collectionApi = apiSlice.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: [{ type: 'Collection', id: 'ADMIN' }, { type: 'Collection', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'Collection', id: 'ADMIN' },
+        { type: 'Collection', id: 'LIST' },
+        { type: 'Collection', id: arg._id },
+      ],
     }),
     deleteCollection: builder.mutation({
       query: ({ id }: { id: string }) => ({
         url: `/api/store/dashboard/collection?id=${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: [{ type: 'Collection', id: 'ADMIN' }, { type: 'Collection', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'Collection', id: 'ADMIN' },
+        { type: 'Collection', id: 'LIST' },
+        { type: 'Collection', id: arg.id },
+      ],
     }),
   }),
 })

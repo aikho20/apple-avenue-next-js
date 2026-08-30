@@ -75,7 +75,7 @@ export default function Home() {
     [productData?.product],
   )
 
-  const { data: collectionsData } = useGetCollectionsQuery({})
+  const { data: collectionsData } = useGetCollectionsQuery({}, { refetchOnMountOrArgChange: true, refetchOnFocus: true, refetchOnReconnect: true, pollingInterval: 15000 })
   const collections = (collectionsData?.collections || []).filter(
     (c: any) => c.products && c.products.length > 0,
   )
