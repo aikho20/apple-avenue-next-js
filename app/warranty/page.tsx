@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { ShieldCheck, Calendar, Smartphone, Clock } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { useSession } from 'next-auth/react'
+import { useGetWarrantiesQuery } from '@/store/action/warrantyAction'
 
 type Warranty = {
   _id: string
@@ -19,21 +19,8 @@ type Warranty = {
 
 export default function WarrantyPage() {
   const { data: session, status } = useSession()
-  const [warranties, setWarranties] = useState<Warranty[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchWarranties = async () => {
-    setLoading(true)
-    const res = await fetch('/api/warranty')
-    const data = await res.json()
-    if (res.ok) setWarranties(data.warranties || [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    if (status === 'authenticated') fetchWarranties()
-    else if (status === 'unauthenticated') setLoading(false)
-  }, [status])
+  const { data, isLoading: loading } = useGetWarrantiesQuery({}, { skip: status !== 'authenticated' })
+  const warranties: Warranty[] = data?.warranties || []
 
   if (status === 'loading') return <div className="w-full min-h-[50vh] flex items-center justify-center"><p className="text-[13px] text-[#6E6E73]">Loading...</p></div>
   if (status === 'unauthenticated') return (

@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   title: 'Apple Avenue | Premium Apple Marketplace — iPhone, iPad, Mac & More',
   description:
     'Apple Avenue is a premium, curated marketplace for authentic Apple devices. Discover iPhone, iPad, Mac, Apple Watch, AirPods and accessories — certified, warranty-backed and delivered flawlessly.',
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
 }
 
 export default function RootLayout({

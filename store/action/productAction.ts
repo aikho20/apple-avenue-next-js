@@ -7,40 +7,20 @@ export const productApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // <Type of data the call will return, Type of parameter being passed to the query function>
     addProduct: builder.mutation({
-      query: ({
-        _id,
-        productName,
-        description,
-        price,
-        cost,
-        quantity,
-        images,
-        category,
-        status,
-      }: ProductFormProps) => ({
+      query: (payload: ProductFormProps) => ({
         url: '/api/store/dashboard/product/add-product',
         method: 'POST',
-        body: { productName, description, price, cost, quantity, images, category, status },
+        body: payload,
       }),
-      invalidatesTags: [{ type: 'Product', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Product', id: 'LIST' }, { type: 'Inventory', id: 'LIST' }],
     }),
     updateProduct: builder.mutation({
-      query: ({
-        productName,
-        description,
-        price,
-        cost,
-        quantity,
-        images,
-        category,
-        _id,
-        status,
-      }: ProductFormProps) => ({
+      query: (payload: ProductFormProps) => ({
         url: '/api/store/dashboard/product/update-product',
         method: 'POST',
-        body: { productName, description, price, cost, quantity, images, category, _id, status },
+        body: payload,
       }),
-      invalidatesTags: [{ type: 'Product', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Product', id: 'LIST' }, { type: 'Inventory', id: 'LIST' }],
     }),
     deleteProduct: builder.mutation({
       query: ({ _id }: { _id: string }) => ({

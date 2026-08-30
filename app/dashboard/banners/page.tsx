@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, ChangeEvent } from 'react'
+import { useState, ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -8,45 +8,53 @@ import Image from 'next/image'
 import { Image as ImageLucide, Plus, Trash2, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { fileBase64 } from '@/utils/helper'
+import { useGetDashboardBannersQuery, useCreateBannerMutation, useUpdateBannerMutation, useDeleteBannerMutation } from '@/store/action/bannerAction'
 
 type Banner = { _id: string; title: string; subtitle: string; image: string; link: string; order: number; active: boolean }
 
 export default function BannersPage() {
-  const [banners, setBanners] = useState<Banner[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading: loading } = useGetDashboardBannersQuery({})
+  const banners: Banner[] = data?.banners || []
+  const [createBanner] = useCreateBannerMutation()
+  const [updateBanner] = useUpdateBannerMutation()
+  const [deleteBanner] = useDeleteBannerMutation()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Banner | null>(null)
   const [form, setForm] = useState({ title: '', subtitle: '', image: '', link: '/store', order: 0 })
-
-  const fetchData = async () => {
-    setLoading(true)
-    const res = await fetch('/api/store/dashboard/banner')
-    const data = await res.json()
-    setBanners(data.banners || [])
-    setLoading(false)
-  }
-  useEffect(() => { fetchData() }, [])
 
   const reset = () => { setForm({ title: '', subtitle: '', image: '', link: '/store', order: 0 }); setEditing(null) }
 
   const submit = async () => {
     if (!form.title || !form.image) return toast.error('Title and image required')
-    const url = '/api/store/dashboard/banner'
-    const method = editing ? 'PUT' : 'POST'
-    const body = editing ? { _id: editing._id, ...form } : form
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const data = await res.json()
-    if (res.ok) { toast.success(editing ? 'Banner updated' : 'Banner created'); setOpen(false); reset(); fetchData() } else toast.error(data.error || 'Failed')
+    try {
+      if (editing) {
+        await updateBanner({ _id: editing._id, ...form }).unwrap()
+        toast.success('Banner updated')
+      } else {
+        await createBanner(form).unwrap()
+        toast.success('Banner created')
+      }
+      setOpen(false); reset()
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const remove = async (id: string) => {
     if (!confirm('Delete banner?')) return
-    await fetch(`/api/store/dashboard/banner?id=${id}`, { method: 'DELETE' })
-    toast.success('Deleted'); fetchData()
+    try {
+      await deleteBanner({ id }).unwrap()
+      toast.success('Deleted')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
   const toggleActive = async (b: Banner) => {
-    await fetch('/api/store/dashboard/banner', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: b._id, active: !b.active }) })
-    fetchData()
+    try {
+      await updateBanner({ _id: b._id, active: !b.active }).unwrap()
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   return (

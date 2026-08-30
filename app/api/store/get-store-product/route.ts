@@ -19,20 +19,38 @@ export async function POST(req: NextRequest) {
     if (!product || product.length === 0) {
       return NextResponse.json({ product: [], merchant: user }, { status: 200 })
     }
-    const updatedProduct = product.map((items) => ({
-      _id: items._id.toString(),
-      images: items.images,
-      category: items.category,
-      productName: items.productName,
-      description: items.description,
-      cost: items.cost,
-      quantity: items.quantity,
-      price: Number(items.price.toString()),
-      status: items.status,
-      isFeatured: !!(items as any).isFeatured,
-      isDeal: !!(items as any).isDeal,
-      specs: (items as any).specs || {},
-    }))
+    const updatedProduct = product.map((items: any) => {
+      const quantity = Number(items.quantity || 0)
+      const reservedStock = Number(items.reservedStock || 0)
+      const availableStock = Math.max(quantity - reservedStock, 0)
+      const lowStockThreshold = Number(items.lowStockThreshold ?? 5)
+      let inventoryStatus: string = 'In Stock'
+      if (availableStock <= 0) inventoryStatus = 'Out of Stock'
+      else if (availableStock <= lowStockThreshold) inventoryStatus = 'Low Stock'
+      const sku = items.sku || `SKU-${items._id.toString().slice(-6).toUpperCase()}`
+      return {
+        _id: items._id.toString(),
+        images: items.images,
+        category: items.category,
+        productName: items.productName,
+        description: items.description,
+        cost: items.cost,
+        quantity,
+        price: Number(items.price.toString()),
+        status: items.status,
+        isFeatured: !!items.isFeatured,
+        isDeal: !!items.isDeal,
+        specs: items.specs || {},
+        sku,
+        reservedStock,
+        availableStock,
+        lowStockThreshold,
+        inventoryStatus,
+        updatedAt: items.updatedAt,
+        updatedBy: items.updatedBy || '',
+        merchant: items.merchant,
+      }
+    })
     return NextResponse.json({ product: updatedProduct, merchant: user }, { status: 200 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,56 +1,43 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { CreditCard, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useGetCardsQuery, useCreateCardMutation, useDeleteCardMutation } from '@/store/action/cardsAction'
 
 type CardT = { _id: string; cardNumber: string; holder: string; expiry: string; brand: string }
 
 export default function CardsPage() {
-  const [cards, setCards] = useState<CardT[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading: loading } = useGetCardsQuery({})
+  const cards: CardT[] = data?.cards || []
+  const [createCard, { isLoading: isCreating }] = useCreateCardMutation()
+  const [deleteCard] = useDeleteCardMutation()
   const [holder, setHolder] = useState('')
   const [number, setNumber] = useState('')
   const [expiry, setExpiry] = useState('')
 
-  const fetchCards = async () => {
-    const res = await fetch('/api/account/cards')
-    const data = await res.json()
-    setCards(data.cards || [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchCards()
-  }, [])
-
   const add = async () => {
     if (!holder || !number || !expiry) return toast.error('Fill all fields')
-    const res = await fetch('/api/account/cards', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ holder, cardNumber: number, expiry }),
-    })
-    const data = await res.json()
-    if (res.ok) {
+    try {
+      await createCard({ holder, cardNumber: number, expiry }).unwrap()
       toast.success('Card added')
       setHolder('')
       setNumber('')
       setExpiry('')
-      fetchCards()
-    } else toast.error(data.error || 'Failed')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const remove = async (id: string) => {
-    await fetch('/api/account/cards', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', cardId: id }),
-    })
-    toast.success('Card removed')
-    fetchCards()
+    try {
+      await deleteCard({ id }).unwrap()
+      toast.success('Card removed')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   return (

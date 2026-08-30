@@ -63,10 +63,10 @@ export default function ProductDetailPage() {
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
-      <div className="mx-auto max-w-[1200px] px-6 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gallery */}
-        <div className="rounded-[14px] border border-gray-100 bg-white p-4 shadow-[0_4px_18px_rgba(15,23,42,0.05)]">
-          <div className="relative h-[360px] bg-[#F5F5F7] rounded-[10px] overflow-hidden">
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Gallery */}
+        <div className="rounded-[14px] border border-gray-100 bg-white p-3 sm:p-4 shadow-[0_4px_18px_rgba(15,23,42,0.05)]">
+          <div className="relative h-[280px] sm:h-[360px] bg-[#F5F5F7] rounded-[10px] overflow-hidden">
             <Image src={product.images?.[0] || '/placeholder.jpg'} alt={product.productName} fill className="object-contain p-6" />
           </div>
           <div className="mt-3 flex gap-2">
@@ -108,6 +108,32 @@ export default function ProductDetailPage() {
             </div>
             <div className="mt-3 rounded-[10px] bg-[#F5F5F7] p-3 flex justify-between items-center"><span className="text-[11px] text-[#86868b]">Estimated Monthly</span><span className="text-[16px] font-extrabold text-[#1D1D1F]">₱{monthly.toLocaleString()}</span></div>
             <p className="mt-1 text-[10px] text-[#86868b]">Estimate only — actual financing terms, interest/fees vary. Not a financing offer.</p>
+          </div>
+
+          {/* Inventory — auditable, available = total - reserved */}
+          <div className="rounded-[14px] border border-gray-100 bg-white p-5">
+            <h3 className="text-[13px] font-semibold text-[#1D1D1F]">Inventory</h3>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-[12px]">
+              <div className="rounded-[10px] bg-[#F5F5F7] p-3 text-center">
+                <p className="text-[11px] text-[#86868b]">Total</p>
+                <p className="text-[16px] font-extrabold text-[#1D1D1F]">{(product as any).quantity ?? 0}</p>
+              </div>
+              <div className="rounded-[10px] bg-[#F5F5F7] p-3 text-center">
+                <p className="text-[11px] text-[#86868b]">Reserved</p>
+                <p className="text-[16px] font-bold text-[#6E6E73]">{(product as any).reservedStock ?? 0}</p>
+              </div>
+              <div className={`rounded-[10px] p-3 text-center border ${(product as any).availableStock <= 0 ? 'bg-red-50 border-red-200' : (product as any).availableStock <= ((product as any).lowStockThreshold ?? 5) ? 'bg-amber-50 border-amber-200' : 'bg-[#ECFDF5] border-[#A7F3D0]'}`}>
+                <p className="text-[11px] text-[#86868b]">Available</p>
+                <p className="text-[16px] font-extrabold text-[#1D1D1F]">{(product as any).availableStock ?? (product as any).quantity ?? 0}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+              <span className="rounded-full bg-[#F5F5F7] px-2.5 py-1">SKU: <span className="font-mono font-semibold">{(product as any).sku || `SKU-${product._id.slice(-6).toUpperCase()}`}</span></span>
+              <span className={`rounded-full px-2.5 py-1 font-semibold border ${(product as any).inventoryStatus === 'Out of Stock' ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]' : (product as any).inventoryStatus === 'Low Stock' ? 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]' : 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'}`}>{(product as any).inventoryStatus || ((product as any).availableStock > 0 ? 'In Stock' : 'Out of Stock')}</span>
+              <span className="rounded-full bg-[#F5F5F7] px-2.5 py-1">Threshold: {(product as any).lowStockThreshold ?? 5}</span>
+              {(product as any).updatedAt && <span className="rounded-full bg-[#F5F5F7] px-2.5 py-1">Updated: {new Date((product as any).updatedAt).toLocaleDateString()}</span>}
+            </div>
+            <p className="mt-2 text-[11px] text-[#86868b]">Available = Total − Reserved. Low Stock at ≤ threshold. Every stock/price change is audited.</p>
           </div>
 
           {/* Specs structured — from DB, never invented */}

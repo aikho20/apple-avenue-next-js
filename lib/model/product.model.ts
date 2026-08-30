@@ -51,6 +51,22 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    sku: {
+      type: String,
+      default: '',
+    },
+    reservedStock: {
+      type: Number,
+      default: 0,
+    },
+    lowStockThreshold: {
+      type: Number,
+      default: 5,
+    },
+    updatedBy: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: true }
 )

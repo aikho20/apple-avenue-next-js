@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { ShieldCheck, Trash2, Search, Clock, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
 import { useSession } from 'next-auth/react'
+import { useGetDashboardWarrantiesQuery, useUpdateWarrantyMutation, useDeleteDashboardWarrantyMutation, useCreateDashboardWarrantyMutation } from '@/store/action/warrantyAction'
 
 type Warranty = {
   _id: string
@@ -28,41 +29,37 @@ type Warranty = {
 }
 
 export default function WarrantyDashboardPage() {
-  const [warranties, setWarranties] = useState<Warranty[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: warrantyData, isLoading: loading } = useGetDashboardWarrantiesQuery({})
+  const warranties: Warranty[] = warrantyData?.warranties || []
+  const [updateWarranty] = useUpdateWarrantyMutation()
+  const [deleteWarranty] = useDeleteDashboardWarrantyMutation()
+  const [createWarranty, { isLoading: submitting }] = useCreateDashboardWarrantyMutation()
   const [q, setQ] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ userEmail: '', productId: '', orderId: '', imei: '', serialNumber: '', purchaseDate: new Date().toISOString().slice(0, 10) })
-  const [submitting, setSubmitting] = useState(false)
   const { data: session } = useSession()
   const merchant = (session as any)?.user?._id || ''
   const { data: productData } = useGetStoreProductQuery({ merchantId: merchant })
   const products: any[] = (productData?.product || []) as any[]
 
-  const fetchData = async () => {
-    setLoading(true)
-    const res = await fetch('/api/store/dashboard/warranty')
-    const data = await res.json()
-    setWarranties(data.warranties || [])
-    setLoading(false)
-  }
-  useEffect(() => { fetchData() }, [])
-
   const updateStatus = async (id: string, status: string) => {
-    const res = await fetch('/api/store/dashboard/warranty', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: id, status }),
-    })
-    const data = await res.json()
-    if (res.ok) { toast.success(`Status → ${status}`); fetchData() } else toast.error(data.error || 'Failed')
+    try {
+      await updateWarranty({ _id: id, status }).unwrap()
+      toast.success(`Status → ${status}`)
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const remove = async (id: string) => {
     if (!confirm('Delete warranty?')) return
-    await fetch(`/api/store/dashboard/warranty?id=${id}`, { method: 'DELETE' })
-    toast.success('Deleted'); fetchData()
+    try {
+      await deleteWarranty({ id }).unwrap()
+      toast.success('Deleted')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const filtered = warranties.filter((w) => {
@@ -76,15 +73,14 @@ export default function WarrantyDashboardPage() {
 
   const register = async () => {
     if (!form.userEmail || !form.productId || !form.imei || !form.serialNumber || !form.purchaseDate) return toast.error('All fields required: customer email, product, IMEI, serial, purchase date')
-    setSubmitting(true)
-    const res = await fetch('/api/store/dashboard/warranty', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userEmail: form.userEmail, productId: form.productId, orderId: form.orderId || undefined, imei: form.imei, serialNumber: form.serialNumber, purchaseDate: form.purchaseDate }),
-    })
-    const data = await res.json()
-    if (res.ok) { toast.success('Warranty registered for customer'); setShowForm(false); setForm({ userEmail: '', productId: '', orderId: '', imei: '', serialNumber: '', purchaseDate: new Date().toISOString().slice(0, 10) }); fetchData() } else toast.error(data.error || 'Failed')
-    setSubmitting(false)
+    try {
+      await createWarranty({ userEmail: form.userEmail, productId: form.productId, orderId: form.orderId || undefined, imei: form.imei, serialNumber: form.serialNumber, purchaseDate: form.purchaseDate }).unwrap()
+      toast.success('Warranty registered for customer')
+      setShowForm(false)
+      setForm({ userEmail: '', productId: '', orderId: '', imei: '', serialNumber: '', purchaseDate: new Date().toISOString().slice(0, 10) })
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   return (
@@ -187,10 +183,15 @@ export default function WarrantyDashboardPage() {
                       <SelectItem value="Pending">Pending</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" onClick={() => {
+                  <Button variant="outline" size="sm" onClick={async () => {
                     const ext = prompt('Extend warranty expiration (YYYY-MM-DD)', new Date(w.warrantyExpiration).toISOString().slice(0,10))
                     if (!ext) return
-                    fetch('/api/store/dashboard/warranty', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: w._id, warrantyExpiration: ext }) }).then(() => { toast.success('Extended'); fetchData() })
+                    try {
+                      await updateWarranty({ _id: w._id, warrantyExpiration: ext } as any).unwrap()
+                      toast.success('Extended')
+                    } catch (e: any) {
+                      toast.error(e?.data?.error || 'Failed')
+                    }
                   }}>Extend</Button>
                   <Button variant="ghost" size="sm" onClick={() => remove(w._id)} className="text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5 mr-1" /> Delete</Button>
                 </div>

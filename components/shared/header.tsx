@@ -34,7 +34,7 @@ import {
   GitCompare,
   Smartphone,
 } from 'lucide-react'
-import { FaApple } from 'react-icons/fa'
+import Image from 'next/image'
 import { useWishlist } from '@/hooks/useWishlist'
 import { useCompare } from '@/hooks/useCompare'
 import { Input } from '../ui/input'
@@ -57,7 +57,7 @@ const Header = () => {
 
   return (
     <header className='sticky top-0 left-0 z-50 w-full bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.04)]'>
-      <div className='mx-auto flex h-[64px] w-full max-w-[1200px] items-center justify-between gap-4 px-6'>
+      <div className='mx-auto flex h-[56px] sm:h-[64px] w-full max-w-[1280px] items-center justify-between gap-2 sm:gap-4 px-4 sm:px-6'>
         {/* Left: Logo + Nav */}
         <div className='flex items-center gap-8'>
           {/* Mobile menu */}
@@ -74,12 +74,7 @@ const Header = () => {
             <DrawerContent className='h-screen top-0 left-0 mt-0 w-[300px] rounded-r-[14px]'>
               <div className='flex flex-col items-start p-6 gap-6'>
                 <Link href='/' className='flex items-center gap-2 text-[#111111]'>
-                  <div className='flex h-8 w-8 items-center justify-center rounded-md bg-[#111111]'>
-                    <FaApple className='h-5 w-5 text-white' />
-                  </div>
-                  <span className='text-[18px] font-bold tracking-tight text-[#1D1D1F]'>
-                    Apple Avenue
-                  </span>
+                  <Image src="/icon.png" alt="Apple Avenue" width={140} height={32} className="h-8 w-auto object-contain" priority unoptimized />
                 </Link>
                 <nav className='flex flex-col gap-3 w-full max-h-[65vh] overflow-y-auto pr-2'>
                   <p className='text-[11px] font-bold tracking-[0.08em] text-[#86868b] uppercase'>
@@ -155,19 +150,14 @@ const Header = () => {
 
           {/* Logo */}
           <Link href='/' className='flex items-center gap-2 shrink-0'>
-            <div className='flex h-8 w-8 items-center justify-center rounded-[7px] bg-[#111111]'>
-              <FaApple className='h-[18px] w-[18px] text-white' />
-            </div>
-            <span className='text-[17px] font-bold tracking-tight text-[#1D1D1F] leading-none'>
-              Apple Avenue
-            </span>
+            <Image src="/icon.png" alt="Apple Avenue" width={140} height={32} className="h-7 sm:h-8 w-auto object-contain" priority unoptimized />
           </Link>
 
           {/* Desktop Nav — all features visible */}
           <NavigationMenu className='hidden lg:block'>
             <NavigationMenuList className='gap-0'>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className='bg-transparent px-2.5 py-2 text-[13px] font-medium text-[#424245] hover:text-[#0071E3] data-[state=open]:bg-transparent data-[state=open]:text-[#0071E3] hover:bg-transparent focus:bg-transparent h-auto'>
+                <NavigationMenuTrigger className='bg-transparent px-2.5 py-2 text-[13px] font-medium text-[#424245] hover:text-secondary data-[state=open]:bg-transparent data-[state=open]:text-secondary hover:bg-transparent focus:bg-transparent h-auto'>
                   Shop
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
@@ -190,7 +180,7 @@ const Header = () => {
                       </span>
                       <Link
                         href='/deals'
-                        className='text-sm font-medium text-[#0071E3] hover:bg-[#F5F5F7] rounded px-2 py-1'
+                        className='text-sm font-medium text-secondary hover:bg-[#F5F5F7] rounded px-2 py-1'
                       >
                         Deals
                       </Link>
@@ -264,7 +254,7 @@ const Header = () => {
               ].map(([href, label]) => (
                 <NavigationMenuItem key={href} className='hidden xl:block'>
                   <Link href={href} legacyBehavior passHref>
-                    <span className='inline-flex h-auto items-center justify-center rounded-md bg-transparent px-2 py-2 text-[13px] font-medium text-[#424245] hover:text-[#0071E3] transition-colors cursor-pointer'>
+                    <span className='inline-flex h-auto items-center justify-center rounded-md bg-transparent px-2 py-2 text-[13px] font-medium text-[#424245] hover:text-secondary transition-colors cursor-pointer'>
                       {label}
                     </span>
                   </Link>
@@ -272,7 +262,7 @@ const Header = () => {
               ))}
               {/* Compact overflow for large screens - visible on lg but not xl */}
               <NavigationMenuItem className='xl:hidden'>
-                <NavigationMenuTrigger className='bg-transparent px-2 py-2 text-[13px] font-medium text-[#424245] hover:text-[#0071E3] h-auto'>
+                <NavigationMenuTrigger className='bg-transparent px-2 py-2 text-[13px] font-medium text-[#424245] hover:text-secondary h-auto'>
                   More
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
@@ -309,7 +299,7 @@ const Header = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSearch()
               }}
-              className='h-[36px] w-full rounded-full bg-[#F5F5F7] border border-gray-100 pl-9 pr-4 text-[13px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0071E3]/10 focus:border-[#0071E3]/20 transition'
+              className='h-[36px] w-full rounded-full bg-[#F5F5F7] border border-gray-100 pl-9 pr-4 text-[13px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring--secondary/10 focus:border--secondary/20 transition'
             />
           </div>
         </div>
@@ -350,7 +340,7 @@ const Header = () => {
               >
                 <GitCompare className='h-[18px] w-[18px] text-[#111111]' />
                 {compareIds.length > 0 && (
-                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-[#0071E3] text-white text-[10px] font-bold flex items-center justify-center'>
+                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg--secondary text-white text-[10px] font-bold flex items-center justify-center'>
                     {compareIds.length}
                   </span>
                 )}
@@ -414,7 +404,7 @@ const Header = () => {
               >
                 <GitCompare className='h-[18px] w-[18px] text-[#111111]' />
                 {compareIds.length > 0 && (
-                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-[#0071E3] text-white text-[10px] font-bold flex items-center justify-center'>
+                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg--secondary text-white text-[10px] font-bold flex items-center justify-center'>
                     {compareIds.length}
                   </span>
                 )}

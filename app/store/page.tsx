@@ -145,10 +145,10 @@ export default function Store({ searchParams: { storeId } }: StoreProps) {
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-6">
-        <div className="grid grid-cols-7 gap-6">
+      <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 sm:gap-6">
           {/* Main — Single merchant Apple Avenue, no store profile/banner needed per spec */}
-          <div className="lg:col-span-5 md:col-span-4 col-span-7 flex flex-col gap-5">
+          <div className="lg:col-span-5 col-span-1 flex flex-col gap-4 sm:gap-5 min-w-0">
             <div className="rounded-[14px] border border-gray-100 bg-white px-5 py-4 shadow-[0_4px_18px_rgba(15,23,42,0.05)]">
               <h1 className="text-[18px] font-bold tracking-tight text-[#1D1D1F]">Apple Avenue — All Devices</h1>
               <p className="text-[12.5px] text-[#6E6E73]">Single official store • Authentic, warranty-backed • Edit featured products & slider banners in Dashboard</p>
@@ -237,7 +237,7 @@ export default function Store({ searchParams: { storeId } }: StoreProps) {
           </div>
 
           {/* Desktop cart */}
-          <div className="lg:col-span-2 col-span-3 hidden md:block">
+          <div className="lg:col-span-2 hidden lg:block">
             <div className="rounded-[14px] border border-gray-100 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.05)] overflow-hidden sticky top-[80px]">
               <div className="flex justify-center py-3 border-b border-gray-50">
                 <span className="text-[13px] font-semibold text-[#1F2937]">Your Cart</span>

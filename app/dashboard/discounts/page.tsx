@@ -1,76 +1,63 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Percent, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useGetDiscountsQuery, useCreateDiscountMutation, useDeleteDiscountMutation, useUpdateDiscountMutation } from '@/store/action/discountAction'
 
 type Discount = { _id: string; code: string; type: string; value: number; minOrder: number; active: boolean; createdAt: string }
 
 export default function DiscountsPage() {
-  const [discounts, setDiscounts] = useState<Discount[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading: loading } = useGetDiscountsQuery({})
+  const discounts: Discount[] = data?.discounts || []
+  const [createDiscount, { isLoading: creating }] = useCreateDiscountMutation()
+  const [deleteDiscount] = useDeleteDiscountMutation()
+  const [updateDiscount] = useUpdateDiscountMutation()
   const [code, setCode] = useState('')
   const [type, setType] = useState('percentage')
   const [value, setValue] = useState('')
-  const [creating, setCreating] = useState(false)
-
-  const fetchData = async () => {
-    setLoading(true)
-    const res = await fetch('/api/store/dashboard/discount')
-    const data = await res.json()
-    setDiscounts(data.discounts || [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const create = async () => {
     if (!code || !value) return toast.error('Code and value required')
-    setCreating(true)
-    const res = await fetch('/api/store/dashboard/discount', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, type, value: Number(value) }),
-    })
-    const data = await res.json()
-    if (res.ok) {
+    try {
+      await createDiscount({ code, type, value: Number(value) }).unwrap()
       toast.success('Discount created')
       setCode('')
       setValue('')
-      fetchData()
-    } else toast.error(data.error || 'Failed')
-    setCreating(false)
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const remove = async (id: string) => {
-    await fetch(`/api/store/dashboard/discount?id=${id}`, { method: 'DELETE' })
-    toast.success('Deleted')
-    fetchData()
+    try {
+      await deleteDiscount({ id }).unwrap()
+      toast.success('Deleted')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const toggle = async (id: string, active: boolean) => {
-    await fetch('/api/store/dashboard/discount', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: id, active: !active }),
-    })
-    fetchData()
+    try {
+      await updateDiscount({ _id: id, active: !active }).unwrap()
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-[#1F2937]">Discounts</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Discounts</h1>
         <p className="text-[13px] text-[#6B7280]">Manage promotions and discounts</p>
       </div>
 
       <Card className="p-5 flex flex-col gap-4">
-        <h3 className="text-[13px] font-semibold text-[#1F2937]">Create discount</h3>
+        <h3 className="text-[13px] font-semibold text-[#1D1D1F]">Create discount</h3>
         <div className="grid sm:grid-cols-3 gap-3">
           <Input placeholder="Code e.g. SAVE10" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
           <Select value={type} onValueChange={setType}>

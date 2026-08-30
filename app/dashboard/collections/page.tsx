@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -9,16 +9,19 @@ import toast from 'react-hot-toast'
 import Image from 'next/image'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
 import { useSession } from 'next-auth/react'
+import { useGetDashboardCollectionsQuery, useCreateCollectionMutation, useUpdateCollectionMutation, useDeleteCollectionMutation } from '@/store/action/collectionAction'
 
 type Collection = { _id: string; name: string; description: string; image: string; productIds: string[]; createdAt: string }
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading: loading } = useGetDashboardCollectionsQuery({})
+  const collections: Collection[] = data?.collections || []
+  const [createCollection, { isLoading: creating }] = useCreateCollectionMutation()
+  const [updateCollection] = useUpdateCollectionMutation()
+  const [deleteCollection] = useDeleteCollectionMutation()
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
   const [image, setImage] = useState('')
-  const [creating, setCreating] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
   const [activeCol, setActiveCol] = useState<Collection | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -29,40 +32,25 @@ export default function CollectionsPage() {
   const { data: productData } = useGetStoreProductQuery({ merchantId: merchant })
   const products: any[] = (productData?.product || []) as any[]
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/store/dashboard/collection')
-      const data = await res.json()
-      setCollections(data.collections || [])
-    } catch {}
-    setLoading(false)
-  }
-
-  useEffect(() => { fetchData() }, [])
-
   const create = async () => {
     if (!name.trim()) return toast.error('Name required')
-    setCreating(true)
-    const res = await fetch('/api/store/dashboard/collection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc, image }),
-    })
-    const data = await res.json()
-    if (res.ok) {
+    try {
+      await createCollection({ name, description: desc, image }).unwrap()
       toast.success('Collection created — now add products via Manage')
       setName(''); setDesc(''); setImage('')
-      fetchData()
-    } else toast.error(data.error || 'Failed')
-    setCreating(false)
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const remove = async (id: string) => {
     if (!confirm('Delete collection?')) return
-    await fetch(`/api/store/dashboard/collection?id=${id}`, { method: 'DELETE' })
-    toast.success('Deleted')
-    fetchData()
+    try {
+      await deleteCollection({ id }).unwrap()
+      toast.success('Deleted')
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const openManage = (c: Collection) => {
@@ -81,14 +69,13 @@ export default function CollectionsPage() {
 
   const saveProducts = async () => {
     if (!activeCol) return
-    const res = await fetch('/api/store/dashboard/collection', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: activeCol._id, productIds: Array.from(selected) }),
-    })
-    const data = await res.json()
-    if (res.ok) { toast.success(`Saved ${selected.size} products to "${activeCol.name}" — will show on landing page`); setManageOpen(false); fetchData() }
-    else toast.error(data.error || 'Failed')
+    try {
+      await updateCollection({ _id: activeCol._id, productIds: Array.from(selected) }).unwrap()
+      toast.success(`Saved ${selected.size} products to "${activeCol.name}" — will show on landing page`)
+      setManageOpen(false)
+    } catch (e: any) {
+      toast.error(e?.data?.error || 'Failed')
+    }
   }
 
   const filteredProducts = useMemo(() => {

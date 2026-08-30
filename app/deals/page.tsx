@@ -1,28 +1,17 @@
 'use client'
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Timer, Tag, Gift, Truck, Percent, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
+import { useGetDealsQuery } from '@/store/action/dealAction'
 
 type Deal = { _id: string; code: string; type: string; value: number; active: boolean; expiresAt?: string }
 type DealProduct = { _id: string; productName: string; category: string; price: number; images: any; description: string }
 
 export default function DealsPage() {
-  const [deals, setDeals] = useState<Deal[]>([])
-  const [dealProducts, setDealProducts] = useState<DealProduct[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/store/deals')
-      .then((r) => r.json())
-      .then((data) => {
-        setDeals(data.deals || [])
-        setDealProducts(data.dealProducts || [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
+  const { data, isLoading: loading } = useGetDealsQuery({})
+  const deals: Deal[] = data?.deals || []
+  const dealProducts: DealProduct[] = data?.dealProducts || []
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">

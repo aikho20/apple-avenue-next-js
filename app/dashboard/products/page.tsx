@@ -20,8 +20,9 @@ import { DataTable } from '@/components/ui/custom-table'
 import { ADD_PRODUCT, UPDATE_PRODUCT } from '@/utils/data'
 import { ProductInitialValue } from '@/utils/validation/initialValues'
 import { ColumnDef } from '@tanstack/react-table'
-import { ArrowUpDown, Trash2 } from 'lucide-react'
+import { ArrowUpDown, Trash2, Boxes } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useDeleteProductMutation } from '@/store/action/productAction'
 import toast from 'react-hot-toast'
 
@@ -214,18 +215,25 @@ function Products() {
   )
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[20px] font-bold tracking-tight text-[#1F2937]">Products</h1>
-          <p className="text-[13px] text-[#6B7280]">Manage your store catalog</p>
+    <div className="w-full flex flex-col gap-4 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[18px] sm:text-[20px] font-bold tracking-tight text-[#1F2937]">Products</h1>
+          <p className="text-[12px] sm:text-[13px] text-[#6B7280]">Manage your store catalog — inventory & price history audited</p>
         </div>
-        <Button onClick={() => toggle()}>
-          <PlusCircledIcon className="h-4 w-4" /> New product
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Link href="/dashboard/inventory">
+            <Button variant="outline" size="sm" className="sm:size-default"><Boxes className="h-4 w-4 mr-1" /> Inventory</Button>
+          </Link>
+          <Button onClick={() => toggle()} size="sm" className="sm:size-default">
+            <PlusCircledIcon className="h-4 w-4" /> <span className="hidden xs:inline">New product</span><span className="xs:hidden">New</span>
+          </Button>
+        </div>
       </div>
-      <div className="rounded-[14px] border border-gray-100 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.05)] overflow-hidden p-2">
+      <div className="rounded-[14px] border border-gray-100 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.05)] overflow-hidden p-2 overflow-x-auto">
+        <div className="min-w-[640px]">
         <DataTable columns={columns} data={product} />
+        </div>
       </div>
       <Dialog open={value} onOpenChange={setValue}>
         <DialogContent className="lg:max-w-[900px] max-h-[90vh] overflow-auto rounded-[14px]">
