@@ -30,14 +30,22 @@ export const collectionApi = apiSlice.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: [{ type: 'Collection', id: 'ADMIN' }, { type: 'Collection', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'Collection', id: 'ADMIN' },
+        { type: 'Collection', id: 'LIST' },
+        { type: 'Collection', id: arg._id },
+      ],
     }),
     deleteCollection: builder.mutation({
       query: ({ id }: { id: string }) => ({
         url: `/api/store/dashboard/collection?id=${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: [{ type: 'Collection', id: 'ADMIN' }, { type: 'Collection', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'Collection', id: 'ADMIN' },
+        { type: 'Collection', id: 'LIST' },
+        { type: 'Collection', id: arg.id },
+      ],
     }),
   }),
 })
