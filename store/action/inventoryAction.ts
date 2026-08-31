@@ -3,25 +3,25 @@ import { apiSlice } from '@/lib/config/apiSlice'
 export const inventoryApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getInventory: builder.query({
-      query: ({ search, status, category }: { search?: string; status?: string; category?: string } = {}) => ({
-        url: `/api/store/dashboard/inventory?search=${encodeURIComponent(search || '')}&status=${encodeURIComponent(status || '')}&category=${encodeURIComponent(category || '')}`,
+      query: ({ search, status, category, branchId }: { search?: string; status?: string; category?: string; branchId?: string } = {}) => ({
+        url: `/api/store/dashboard/inventory?search=${encodeURIComponent(search || '')}&status=${encodeURIComponent(status || '')}&category=${encodeURIComponent(category || '')}&branchId=${encodeURIComponent(branchId || '')}`,
         method: 'GET',
       }),
       providesTags: [{ type: 'Inventory', id: 'LIST' }, { type: 'Product', id: 'LIST' }],
     }),
     getInventoryHistory: builder.query({
-      query: ({ productId, type, page, limit }: { productId?: string; type?: string; page?: number; limit?: number }) => ({
+      query: ({ productId, type, page, limit, branchId }: { productId?: string; type?: string; page?: number; limit?: number; branchId?: string }) => ({
         url: `/api/store/dashboard/inventory/history`,
         method: 'POST',
-        body: { productId, type, page, limit },
+        body: { productId, type, page, limit, branchId },
       }),
       providesTags: [{ type: 'Inventory', id: 'HISTORY' }],
     }),
     getPriceHistory: builder.query({
-      query: ({ productId, page, limit }: { productId?: string; page?: number; limit?: number }) => ({
+      query: ({ productId, page, limit, branchId }: { productId?: string; page?: number; limit?: number; branchId?: string }) => ({
         url: `/api/store/dashboard/inventory/price-history`,
         method: 'POST',
-        body: { productId, page, limit },
+        body: { productId, page, limit, branchId },
       }),
       providesTags: [{ type: 'PriceHistory', id: 'LIST' }],
     }),

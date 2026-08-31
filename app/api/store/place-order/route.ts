@@ -68,6 +68,24 @@ export async function POST(req: NextRequest) {
 
     const total: number = cartItems.reduce((acc: number, item: ProductCardProps) => acc + item.price * item.value, 0)
 
+    // Resolve branch for order (branch-scoped) via merchant -> branch manager lookup
+    let orderBranchId = ''
+    try {
+      const Branch = (await import('@/lib/model/branch.model')).default
+      const b: any = await Branch.findOne({ manager: userCart.merchant }).lean()
+      if (b) orderBranchId = b._id.toString()
+      else {
+        // Check if merchant is branch id itself
+        const b2: any = await Branch.findById(userCart.merchant).lean().catch(() => null)
+        if (b2) orderBranchId = b2._id.toString()
+      }
+      // Fallback: derive from first product's branch
+      if (!orderBranchId && cartItems.length > 0) {
+        const firstProd: any = await Product.findById((cartItems[0] as any)._id).select('branch').lean()
+        if (firstProd?.branch) orderBranchId = firstProd.branch.toString()
+      }
+    } catch {}
+
     // Decrement inventory with audit history (SALE)
     for (const item of userCart.cart) {
       const pid = (item as any)._id || (item as any).id
@@ -87,6 +105,7 @@ export async function POST(req: NextRequest) {
         await InventoryTransaction.create({
           productId: pid,
           merchant: userCart.merchant,
+          branch: prod.branch || orderBranchId || '',
           type: 'SALE',
           quantityBefore: before,
           quantityChange: -qty,
@@ -101,6 +120,7 @@ export async function POST(req: NextRequest) {
 
     const newOrder = new Order({
       merchant: userCart.merchant,
+      branch: orderBranchId || '',
       user: userCart.user,
       products: cartItems,
       shippingOption,
@@ -118,6 +138,7 @@ export async function POST(req: NextRequest) {
       const Activity = (await import('@/lib/model/activity.model')).default
       await Activity.create({
         merchant: userCart.merchant,
+        branch: orderBranchId || '',
         user: user._id.toString(),
         action: 'order_placed',
         detail: `Order ${newOrder._id} placed for ₱${total}`,

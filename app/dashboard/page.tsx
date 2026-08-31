@@ -4,17 +4,29 @@ import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from 'rechar
 import { useSession } from 'next-auth/react'
 import { useGetDashboardOrderQuery } from '@/store/action/dashboardAction'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import Link from 'next/link'
+import { useState } from 'react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const chartConfig = { desktop: { label: 'Revenue', color: '#111111' } } satisfies ChartConfig
 
 export default function Dashboard() {
   const { data: session } = useSession()
   const merchantId = (session as any)?.user?._id || ''
-  const { data: ordersData } = useGetDashboardOrderQuery({ merchantId }, { skip: !merchantId })
-  const { data: productData } = useGetStoreProductQuery({ merchantId: merchantId || undefined })
+  const role = (session as any)?.user?.role
+  const isAdmin = role === 'admin'
+  const isBranch = role === 'branch'
+  const ownBranchId = (session as any)?.user?.branch ? String((session as any).user.branch) : ''
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const effectiveBranchId = isBranch ? ownBranchId : isAdmin && branchId !== 'all' ? branchId : undefined
+  const dashboardBranchParam = isBranch ? ownBranchId : isAdmin ? branchId : undefined
+  const { data: ordersData } = useGetDashboardOrderQuery({ merchantId, branchId: dashboardBranchParam }, { skip: !merchantId })
+  const { data: productData } = useGetStoreProductQuery(effectiveBranchId ? { branchId: effectiveBranchId } : effectiveBranchId === undefined && isAdmin && branchId === 'all' ? { branchId: 'all' } : { merchantId: merchantId || undefined })
 
   const orders: any[] = ordersData?.orders || []
   const products: any[] = productData?.product || []
@@ -50,9 +62,21 @@ export default function Dashboard() {
 
   return (
     <div className="w-full flex flex-col gap-6">
-      <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Dashboard — Apple Avenue</h1>
-        <p className="text-[13px] text-[#6E6E73]">Single-merchant overview — official store. Compare vs previous day/week/month/year.</p>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Dashboard — {isBranch ? `${(session as any)?.user?.branchName || 'Your Branch'}` : 'Apple Avenue'}</h1>
+          <p className="text-[13px] text-[#6E6E73]">{isBranch ? `Branch-scoped overview — only your branch data. ${ownBranchId ? '' : 'No branch assigned.'}` : isAdmin ? 'Admin overview — filter by branch or view all.' : 'Single-merchant overview — official store. Compare vs previous day/week/month/year.'}</p>
+        </div>
+        {isAdmin && branches.length > 0 && (
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {isBranch && ownBranchId && <div className="rounded-full bg-[#F5F5F7] border border-gray-200 px-3 py-1.5 text-[12px] font-medium text-[#1D1D1F]">{(session as any)?.user?.branchName || ownBranchId}</div>}
       </div>
 
       {/* KPI 4-wide per spec */}

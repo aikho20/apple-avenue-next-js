@@ -17,6 +17,7 @@ const inventoryTransactionSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     merchant: { type: String, required: true, index: true },
+    branch: { type: String, default: '', index: true },
     type: { type: String, enum: InventoryTransactionTypes, required: true },
     quantityBefore: { type: Number, required: true },
     quantityChange: { type: Number, required: true },

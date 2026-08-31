@@ -35,8 +35,11 @@ import {
   Smartphone,
 } from 'lucide-react'
 import Image from 'next/image'
+import { BranchSelector } from '@/components/branch/branch-selector'
 import { useWishlist } from '@/hooks/useWishlist'
 import { useCompare } from '@/hooks/useCompare'
+import { useBranch } from '@/hooks/useBranch'
+import { useGetStoreProductQuery } from '@/store/action/storeAction'
 import { Input } from '../ui/input'
 import { Separator } from '../ui/separator'
 import { DialogDescription } from '../ui/dialog'
@@ -48,6 +51,11 @@ const Header = () => {
   const [search, setSearch] = React.useState('')
   const { wishlistIds } = useWishlist()
   const { ids: compareIds } = useCompare()
+  const { currentId: branchId } = useBranch()
+  const { data: productData } = useGetStoreProductQuery(branchId ? { branchId } : {})
+  const branchIdsSet = React.useMemo(() => new Set(((productData?.product || []) as any[]).map((p: any) => p._id)), [productData])
+  const filteredWishlist = React.useMemo(() => wishlistIds.filter((id: string) => branchIdsSet.size === 0 ? true : branchIdsSet.has(id)), [wishlistIds, branchIdsSet])
+  const filteredCompare = React.useMemo(() => compareIds.filter((id: string) => branchIdsSet.size === 0 ? true : branchIdsSet.has(id)), [compareIds, branchIdsSet])
 
   const handleSearch = () => {
     const q = search.trim()
@@ -76,6 +84,7 @@ const Header = () => {
                 <Link href='/' className='flex items-center gap-2 text-[#111111]'>
                   <Image src="/icon.png" alt="Apple Avenue" width={140} height={32} className="h-8 w-auto object-contain" priority unoptimized />
                 </Link>
+                <BranchSelector />
                 <nav className='flex flex-col gap-3 w-full max-h-[65vh] overflow-y-auto pr-2'>
                   <p className='text-[11px] font-bold tracking-[0.08em] text-[#86868b] uppercase'>
                     Shop
@@ -152,6 +161,9 @@ const Header = () => {
           <Link href='/' className='flex items-center gap-2 shrink-0'>
             <Image src="/icon.png" alt="Apple Avenue" width={140} height={32} className="h-7 sm:h-8 w-auto object-contain" priority unoptimized />
           </Link>
+          <div className="hidden sm:flex ml-2">
+            <BranchSelector compact />
+          </div>
 
           {/* Desktop Nav — all features visible */}
           <NavigationMenu className='hidden lg:block'>
@@ -299,7 +311,7 @@ const Header = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSearch()
               }}
-              className='h-[36px] w-full rounded-full bg-[#F5F5F7] border border-gray-100 pl-9 pr-4 text-[13px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring--secondary/10 focus:border--secondary/20 transition'
+              className='h-[36px] w-full rounded-full bg-[#F5F5F7] border border-gray-100 pl-9 pr-4 text-[13px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/10 focus:border--secondary/20 transition'
             />
           </div>
         </div>
@@ -327,9 +339,9 @@ const Header = () => {
                 title='Wishlist'
               >
                 <Heart className='h-[18px] w-[18px] text-[#111111]' />
-                {wishlistIds.length > 0 && (
+                {filteredWishlist.length > 0 && (
                   <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-[#111111] text-white text-[10px] font-bold flex items-center justify-center'>
-                    {wishlistIds.length}
+                    {filteredWishlist.length}
                   </span>
                 )}
               </Link>
@@ -339,9 +351,9 @@ const Header = () => {
                 title='Compare (2-4)'
               >
                 <GitCompare className='h-[18px] w-[18px] text-[#111111]' />
-                {compareIds.length > 0 && (
-                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg--secondary text-white text-[10px] font-bold flex items-center justify-center'>
-                    {compareIds.length}
+                {filteredCompare.length > 0 && (
+                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-secondary text-white text-[10px] font-bold flex items-center justify-center'>
+                    {filteredCompare.length}
                   </span>
                 )}
               </Link>
@@ -360,7 +372,7 @@ const Header = () => {
                   <User className='h-[18px] w-[18px] text-[#111111]' />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align='end' className='w-48'>
-                  {session?.user?.role === 'admin' && (
+                  {(session?.user?.role === 'admin' || (session as any)?.user?.role === 'branch') && (
                     <DropdownMenuItem asChild>
                       <Link href='/dashboard' className='w-full cursor-pointer text-sm'>
                         Dashboard
@@ -391,9 +403,9 @@ const Header = () => {
                 title='Wishlist'
               >
                 <Heart className='h-[18px] w-[18px] text-[#111111]' />
-                {wishlistIds.length > 0 && (
+                {filteredWishlist.length > 0 && (
                   <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-[#111111] text-white text-[10px] font-bold flex items-center justify-center'>
-                    {wishlistIds.length}
+                    {filteredWishlist.length}
                   </span>
                 )}
               </Link>
@@ -403,9 +415,9 @@ const Header = () => {
                 title='Compare'
               >
                 <GitCompare className='h-[18px] w-[18px] text-[#111111]' />
-                {compareIds.length > 0 && (
-                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg--secondary text-white text-[10px] font-bold flex items-center justify-center'>
-                    {compareIds.length}
+                {filteredCompare.length > 0 && (
+                  <span className='absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-secondary text-white text-[10px] font-bold flex items-center justify-center'>
+                    {filteredCompare.length}
                   </span>
                 )}
               </Link>

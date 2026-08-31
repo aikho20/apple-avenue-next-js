@@ -3,11 +3,11 @@ import { apiSlice } from '@/lib/config/apiSlice'
 export const discountApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getDiscounts: builder.query({
-      query: () => ({ url: '/api/store/dashboard/discount', method: 'GET' }),
+      query: ({ branchId }: { branchId?: string } = {}) => ({ url: `/api/store/dashboard/discount${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ''}`, method: 'GET' }),
       providesTags: [{ type: 'Discount', id: 'LIST' }],
     }),
     createDiscount: builder.mutation({
-      query: (body: { code: string; type?: string; value: number; minOrder?: number; expiresAt?: string }) => ({
+      query: (body: { code: string; type?: string; value: number; minOrder?: number; expiresAt?: string; branchId?: string }) => ({
         url: '/api/store/dashboard/discount',
         method: 'POST',
         body,

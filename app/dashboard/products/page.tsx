@@ -20,10 +20,12 @@ import { DataTable } from '@/components/ui/custom-table'
 import { ADD_PRODUCT, UPDATE_PRODUCT } from '@/utils/data'
 import { ProductInitialValue } from '@/utils/validation/initialValues'
 import { ColumnDef } from '@tanstack/react-table'
-import { ArrowUpDown, Trash2, Boxes } from 'lucide-react'
+import { ArrowUpDown, Trash2, Boxes, StoreIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useDeleteProductMutation } from '@/store/action/productAction'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import toast from 'react-hot-toast'
 
 function Products() {
@@ -35,9 +37,15 @@ function Products() {
     initialValue: ProductInitialValue,
   })
   const merchant = session?.user?._id || ''
-  const { data: productData, isLoading: isFetchingProduct } = useGetStoreProductQuery({
-    merchantId: merchant,
-  })
+  const role = (session as any)?.user?.role
+  const isAdmin = role === 'admin'
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const { data: productData, isLoading: isFetchingProduct } = useGetStoreProductQuery(
+    isAdmin && branchId !== 'all' ? { branchId } : isAdmin && branchId === 'all' ? { branchId: 'all' } : { merchantId: merchant }
+  )
+  const canAdd = !isAdmin || (isAdmin && branchId !== 'all')
   const [deleteProduct] = useDeleteProductMutation()
 
   const columns = React.useMemo<ColumnDef<any, any>[]>(
@@ -219,13 +227,22 @@ function Products() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-[18px] sm:text-[20px] font-bold tracking-tight text-[#1F2937]">Products</h1>
-          <p className="text-[12px] sm:text-[13px] text-[#6B7280]">Manage your store catalog — inventory & price history audited</p>
+          <p className="text-[12px] sm:text-[13px] text-[#6B7280]">Manage your store catalog — inventory & price history audited {isAdmin ? '(Admin: filter by branch)' : `(${branches[0]?.name || 'Branch'})`}</p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap">
+          {isAdmin && branches.length > 0 && (
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Link href="/dashboard/inventory">
             <Button variant="outline" size="sm" className="sm:size-default"><Boxes className="h-4 w-4 mr-1" /> Inventory</Button>
           </Link>
-          <Button onClick={() => toggle()} size="sm" className="sm:size-default">
+          <Button onClick={() => { if (!canAdd) return toast.error('Admin must select a branch before adding product'); toggle() }} size="sm" className="sm:size-default" disabled={!canAdd}>
             <PlusCircledIcon className="h-4 w-4" /> <span className="hidden xs:inline">New product</span><span className="xs:hidden">New</span>
           </Button>
         </div>
@@ -238,11 +255,11 @@ function Products() {
       <Dialog open={value} onOpenChange={setValue}>
         <DialogContent className="lg:max-w-[900px] max-h-[90vh] overflow-auto rounded-[14px]">
           <DialogHeader>
-            <DialogTitle className="text-[#1F2937]">Add Product</DialogTitle>
-            <DialogDescription>Add new product to your store</DialogDescription>
+            <DialogTitle className="text-[#1F2937]">Add Product {isAdmin && branchId !== 'all' ? `— ${branches.find((b:any)=>b._id===branchId)?.name || ''}` : ''}</DialogTitle>
+            <DialogDescription>{isAdmin && branchId === 'all' ? 'Select a branch before adding' : 'Add new product to your store'}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <ProductForm action={ADD_PRODUCT} initialValue={ProductInitialValue} callback={() => setValue(false)} />
+            {isAdmin && branchId === 'all' ? <p className="text-[13px] text-amber-600 bg-amber-50 border border-amber-200 p-3 rounded-[10px]">Admin must select a branch before adding product. Choose a branch from the dropdown above.</p> : <ProductForm action={ADD_PRODUCT} initialValue={{ ...ProductInitialValue, branch: isAdmin ? branchId : undefined, branchId: isAdmin ? branchId : undefined } as any} callback={() => setValue(false)} />}
           </div>
         </DialogContent>
       </Dialog>

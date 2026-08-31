@@ -4,7 +4,8 @@ import { LayoutDashboard } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React from 'react'
+import React, { useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 
 interface ProviderProps {
   children: React.ReactNode
@@ -12,6 +13,18 @@ interface ProviderProps {
 }
 export default function DashboardLayout({ children, toggle }: ProviderProps) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const role = (session as any)?.user?.role
+  const filteredMenu = useMemo(() => {
+    if (role === 'branch') {
+      // Branch managers should not see Branches management
+      return DASHBOARD_MENU.map((menu) => ({
+        ...menu,
+        items: menu.items.filter((it) => it.route !== '/dashboard/branches'),
+      })).filter((menu) => menu.items.length > 0)
+    }
+    return DASHBOARD_MENU
+  }, [role])
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
       <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6 flex flex-col lg:flex-row gap-4 lg:gap-6">
@@ -31,7 +44,7 @@ export default function DashboardLayout({ children, toggle }: ProviderProps) {
                 <LayoutDashboard className={`h-4 w-4 ${pathname === '/dashboard' ? 'text-[#111111]' : 'text-[#6E6E73]'}`} />
                 Dashboard
               </Link>
-              {DASHBOARD_MENU.map((menu, index) => (
+              {filteredMenu.map((menu, index) => (
                 <div key={index} className="flex flex-col gap-1">
                   <span className="px-3 text-[10.5px] font-bold tracking-[0.08em] text-[#9CA3AF] uppercase">
                     {menu.title}
@@ -62,7 +75,7 @@ export default function DashboardLayout({ children, toggle }: ProviderProps) {
         <div className="lg:hidden -mx-4 px-4 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-2 pb-2 w-max">
             <Link href="/dashboard" className={`shrink-0 rounded-full px-4 py-2 text-[12px] font-semibold border ${pathname === '/dashboard' ? 'bg-[#111111] text-white border-[#111111]' : 'bg-white text-[#424245] border-gray-200'}`}>Dashboard</Link>
-            {DASHBOARD_MENU.flatMap((m) => m.items).map((it) => {
+            {filteredMenu.flatMap((m) => m.items).map((it) => {
               const Icon = it.icon
               const active = pathname === it.route
               return (

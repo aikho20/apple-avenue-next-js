@@ -8,13 +8,22 @@ import { Star, Search, Check, Eye } from 'lucide-react'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
 import { useUpdateProductMutation } from '@/store/action/productAction'
 import { useSession } from 'next-auth/react'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import toast from 'react-hot-toast'
 
 export default function FeaturedPage() {
   const { data: session } = useSession()
   const merchant = (session as any)?.user?._id || ''
-  const { data, isLoading } = useGetStoreProductQuery({ merchantId: merchant })
+  const isAdmin = (session as any)?.user?.role === 'admin'
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const { data, isLoading } = useGetStoreProductQuery(
+    isAdmin && branchId !== 'all' ? { branchId } : isAdmin && branchId === 'all' ? { branchId: 'all' } as any : { merchantId: merchant }
+  )
   const [query, setQuery] = useState('')
+  const canManage = !isAdmin || branchId !== 'all'
 
   const products: any[] = (data?.product || []) as any[]
   const featured = useMemo(() => products.filter((p) => p.isFeatured), [products])
@@ -25,6 +34,7 @@ export default function FeaturedPage() {
   const [updateProduct] = useUpdateProductMutation()
 
   const toggleFeatured = async (p: any) => {
+    if (!canManage) return toast.error('Admin must select a branch before managing featured')
     try {
       await updateProduct({ _id: p._id, isFeatured: !p.isFeatured } as any).unwrap()
       toast.success(!p.isFeatured ? 'Added to Featured — shows on landing page' : 'Removed from Featured')
@@ -35,13 +45,24 @@ export default function FeaturedPage() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] flex items-center gap-2"><Star className="h-5 w-5 text-[#111111]" /> Featured — Custom Landing Collection</h1>
-          <p className="text-[13px] text-[#6E6E73]">Create custom featured products that will show in the landing page. Toggle Featured in the list — homepage updates instantly.</p>
+          <p className="text-[13px] text-[#6E6E73]">Create custom featured products that will show in the landing page. {isAdmin ? 'Select branch before managing.' : 'Branch scoped.'} Toggle Featured — homepage updates instantly.</p>
         </div>
-        <div className="text-[12px] text-[#6E6E73] bg-[#F5F5F7] rounded-full px-3 py-1">{featured.length} featured / {products.length} total</div>
+        <div className="flex items-center gap-2">
+          {isAdmin && branches.length > 0 && (
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Branches</SelectItem>{branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+          <div className="text-[12px] text-[#6E6E73] bg-[#F5F5F7] rounded-full px-3 py-1 shrink-0">{featured.length} featured / {products.length} total</div>
+        </div>
       </div>
+      {isAdmin && !canManage && (
+        <div className="rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">Admin must select a branch before managing featured — choose a branch from the dropdown.</div>
+      )}
 
       <Card className="p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2">

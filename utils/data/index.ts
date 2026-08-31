@@ -34,6 +34,11 @@ export const DASHBOARD_MENU = [
         icon: Boxes,
       },
       {
+        title: 'Branches',
+        route: '/dashboard/branches',
+        icon: StoreIcon,
+      },
+      {
         title: 'Featured',
         route: '/dashboard/featured',
         icon: Star,

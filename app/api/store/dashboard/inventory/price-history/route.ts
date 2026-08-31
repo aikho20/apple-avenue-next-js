@@ -29,10 +29,32 @@ async function handle(req: NextRequest) {
     const productId = (url.searchParams.get('productId') || body.productId || '').toString()
     const page = Math.max(parseInt((url.searchParams.get('page') || body.page || '1').toString()), 1)
     const limit = Math.min(Math.max(parseInt((url.searchParams.get('limit') || body.limit || '20').toString()), 1), 100)
-    const merchantId = await resolveMerchantId(body.merchantId || url.searchParams.get('merchantId') || user._id.toString())
-
+    const branchIdParam = (url.searchParams.get('branchId') || body.branchId || '').toString()
+    let merchantId: string | null = null
+    const userRole = (user as any).role
+    if (userRole !== 'branch') {
+      if (branchIdParam && branchIdParam !== 'all') {
+        try {
+          const Branch = (await import('@/lib/model/branch.model')).default
+          const br: any = await Branch.findById(branchIdParam).lean().catch(() => null)
+          if (br?.manager) merchantId = br.manager.toString()
+        } catch {}
+      } else {
+        merchantId = await resolveMerchantId(body.merchantId || url.searchParams.get('merchantId') || user._id.toString())
+      }
+    }
     const filter: any = {}
-    if (merchantId) filter.merchant = merchantId
+    if (userRole === 'branch') {
+      const ownBranch = (user as any).branch ? (user as any).branch.toString() : ''
+      if (ownBranch) filter.branch = ownBranch
+      else filter.merchant = (user as any)._id.toString()
+    } else {
+      if (branchIdParam && branchIdParam !== 'all') {
+        filter.branch = branchIdParam
+      } else if (branchIdParam === 'all') {
+        // no filter
+      } else if (merchantId) filter.merchant = merchantId
+    }
     if (productId) filter.productId = productId
 
     const total = await PriceHistory.countDocuments(filter)

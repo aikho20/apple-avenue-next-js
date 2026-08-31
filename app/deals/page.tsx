@@ -1,25 +1,35 @@
 'use client'
 import Link from 'next/link'
-import { Timer, Tag, Gift, Truck, Percent, ArrowRight } from 'lucide-react'
+import { Timer, Tag, Gift, Truck, Percent, ArrowRight, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { useGetDealsQuery } from '@/store/action/dealAction'
+import { useBranch } from '@/hooks/useBranch'
+import { CurrentBranchBanner } from '@/components/branch/branch-selector'
 
 type Deal = { _id: string; code: string; type: string; value: number; active: boolean; expiresAt?: string }
 type DealProduct = { _id: string; productName: string; category: string; price: number; images: any; description: string }
 
 export default function DealsPage() {
-  const { data, isLoading: loading } = useGetDealsQuery({})
+  const { currentId: branchId, currentBranch } = useBranch()
+  const { data, isLoading: loading } = useGetDealsQuery(branchId ? { branchId } : {})
   const deals: Deal[] = data?.deals || []
   const dealProducts: DealProduct[] = data?.dealProducts || []
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
+      <CurrentBranchBanner />
       <div className="mx-auto max-w-[1200px] px-6 py-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Deals — from Admin Dashboard</h1>
-            <p className="text-[12.5px] text-[#6E6E73]">All deals & coupons are created by the admin in Dashboard → Discounts. No fake urgency — real expiration only.</p>
+            <p className="text-[12.5px] text-[#6E6E73]">
+              {currentBranch ? (
+                <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#FF6A00]" /> {currentBranch.name} • {currentBranch.address} — deals & coupons filtered to this branch</span>
+              ) : (
+                'All deals & coupons are created by the admin in Dashboard → Discounts. No fake urgency — real expiration only. Select a branch for accurate deals.'
+              )}
+            </p>
           </div>
           <Link href="/dashboard/discounts" className="hidden sm:inline-flex text-[12px] font-semibold text-[#6E6E73] rounded-full bg-white border border-gray-100 px-3 py-1">Manage in Dashboard →</Link>
         </div>

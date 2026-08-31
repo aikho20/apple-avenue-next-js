@@ -10,11 +10,18 @@ import Image from 'next/image'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
 import { useSession } from 'next-auth/react'
 import { useGetDashboardCollectionsQuery, useCreateCollectionMutation, useUpdateCollectionMutation, useDeleteCollectionMutation } from '@/store/action/collectionAction'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type Collection = { _id: string; name: string; description: string; image: string; productIds: string[]; createdAt: string }
 
 export default function CollectionsPage() {
-  const { data, isLoading: loading } = useGetDashboardCollectionsQuery({})
+  const { data: session } = useSession()
+  const isAdmin = (session as any)?.user?.role === 'admin'
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const { data, isLoading: loading } = useGetDashboardCollectionsQuery({ branchId: isAdmin ? branchId : undefined })
   const collections: Collection[] = data?.collections || []
   const [createCollection, { isLoading: creating }] = useCreateCollectionMutation()
   const [updateCollection] = useUpdateCollectionMutation()
@@ -27,15 +34,15 @@ export default function CollectionsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [q, setQ] = useState('')
 
-  const { data: session } = useSession()
   const merchant = (session as any)?.user?._id || ''
-  const { data: productData } = useGetStoreProductQuery({ merchantId: merchant })
+  const { data: productData } = useGetStoreProductQuery(isAdmin && branchId !== 'all' ? { branchId } : isAdmin && branchId === 'all' ? { branchId: 'all' } : { merchantId: merchant })
   const products: any[] = (productData?.product || []) as any[]
 
   const create = async () => {
     if (!name.trim()) return toast.error('Name required')
+    if (isAdmin && (!branchId || branchId === 'all')) return toast.error('Admin must select a branch before adding collection')
     try {
-      await createCollection({ name, description: desc, image }).unwrap()
+      await createCollection({ name, description: desc, image, branchId: isAdmin ? branchId : undefined } as any).unwrap()
       toast.success('Collection created — now add products via Manage')
       setName(''); setDesc(''); setImage('')
     } catch (e: any) {
@@ -85,11 +92,17 @@ export default function CollectionsPage() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Collections</h1>
-          <p className="text-[13px] text-[#6E6E73]">Create collections, add products, and they appear on the landing page automatically.</p>
+          <p className="text-[13px] text-[#6E6E73]">Create collections, add products, and they appear on the landing page automatically. {isAdmin ? 'Select branch before adding.' : ''}</p>
         </div>
+        {isAdmin && branches.length > 0 && (
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All Branches</SelectItem>{branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}</SelectContent>
+          </Select>
+        )}
       </div>
 
       <Card className="p-5 flex flex-col gap-4">

@@ -9,7 +9,7 @@ export default withAuth(
   function middleware(req) {
     const { token } = req.nextauth
     const { pathname, origin } = req.nextUrl
-    if (pathname.startsWith('/dashboard') && token?.role !== 'admin') {
+    if (pathname.startsWith('/dashboard') && token?.role !== 'admin' && token?.role !== 'branch') {
       return NextResponse.redirect(`${origin}/unauthorized`)
     }
   },

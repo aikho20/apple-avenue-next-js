@@ -7,11 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Percent, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useGetDiscountsQuery, useCreateDiscountMutation, useDeleteDiscountMutation, useUpdateDiscountMutation } from '@/store/action/discountAction'
+import { useSession } from 'next-auth/react'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
 
 type Discount = { _id: string; code: string; type: string; value: number; minOrder: number; active: boolean; createdAt: string }
 
 export default function DiscountsPage() {
-  const { data, isLoading: loading } = useGetDiscountsQuery({})
+  const { data: session } = useSession()
+  const isAdmin = (session as any)?.user?.role === 'admin'
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const { data, isLoading: loading } = useGetDiscountsQuery({ branchId: isAdmin ? branchId : undefined })
   const discounts: Discount[] = data?.discounts || []
   const [createDiscount, { isLoading: creating }] = useCreateDiscountMutation()
   const [deleteDiscount] = useDeleteDiscountMutation()
@@ -22,8 +29,9 @@ export default function DiscountsPage() {
 
   const create = async () => {
     if (!code || !value) return toast.error('Code and value required')
+    if (isAdmin && (!branchId || branchId === 'all')) return toast.error('Admin must select a branch before adding discount')
     try {
-      await createDiscount({ code, type, value: Number(value) }).unwrap()
+      await createDiscount({ code, type, value: Number(value), branchId: isAdmin ? branchId : undefined } as any).unwrap()
       toast.success('Discount created')
       setCode('')
       setValue('')
@@ -51,9 +59,17 @@ export default function DiscountsPage() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Discounts</h1>
-        <p className="text-[13px] text-[#6B7280]">Manage promotions and discounts</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F]">Discounts</h1>
+          <p className="text-[13px] text-[#6B7280]">Manage promotions and discounts {isAdmin ? '— select branch before adding' : ''}</p>
+        </div>
+        {isAdmin && branches.length > 0 && (
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All Branches</SelectItem>{branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}</SelectContent>
+          </Select>
+        )}
       </div>
 
       <Card className="p-5 flex flex-col gap-4">

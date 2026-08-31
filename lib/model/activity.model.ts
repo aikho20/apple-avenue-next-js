@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 const activitySchema = new mongoose.Schema(
   {
     merchant: { type: String, required: true },
+    branch: { type: String, default: '', index: true },
     user: { type: String },
     action: { type: String, required: true },
     detail: { type: String, default: '' },

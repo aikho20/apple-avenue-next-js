@@ -5,6 +5,7 @@ const collectionSchema = new mongoose.Schema(
     name: { type: String, required: true },
     description: { type: String, default: '' },
     merchant: { type: String, required: true },
+    branch: { type: String, default: '' },
     image: { type: String, default: '' },
     productIds: { type: [String], default: [] },
   },

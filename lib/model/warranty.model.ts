@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 
 const warrantySchema = new mongoose.Schema(
   {
+    branch: { type: String, default: '', index: true },
     user: { type: String, required: true, index: true },
     product: { type: String, required: true }, // product _id
     productName: { type: String, default: '' },

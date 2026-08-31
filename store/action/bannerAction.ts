@@ -7,11 +7,11 @@ export const bannerApi = apiSlice.injectEndpoints({
       providesTags: [{ type: 'Banner', id: 'LIST' }],
     }),
     getDashboardBanners: builder.query({
-      query: () => ({ url: '/api/store/dashboard/banner', method: 'GET' }),
+      query: ({ branchId }: { branchId?: string } = {}) => ({ url: `/api/store/dashboard/banner${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ''}`, method: 'GET' }),
       providesTags: [{ type: 'Banner', id: 'ADMIN' }],
     }),
     createBanner: builder.mutation({
-      query: (body: { title: string; subtitle?: string; image: string; link?: string; order?: number }) => ({
+      query: (body: { title: string; subtitle?: string; image: string; link?: string; order?: number; branchId?: string }) => ({
         url: '/api/store/dashboard/banner',
         method: 'POST',
         body,

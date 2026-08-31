@@ -11,18 +11,28 @@ export async function PUT(req: NextRequest) {
     await connectDB()
     const session = await getServerSession(nextauthOptions)
     if (!session?.user?._id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const user: any = await User.findById(session.user._id)
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { orderId, status } = await req.json()
     const allowed = ['Pending', 'Out For Delivery', 'Delivered', 'Cancelled']
     if (!allowed.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
-    const order = await Order.findById(orderId)
+    const order: any = await Order.findById(orderId)
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    if (order.merchant.toString() !== user._id.toString()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Branch can only manage own branch orders
+    if (user.role === 'branch') {
+      const ownBranch = user.branch ? user.branch.toString() : ''
+      const orderBranch = (order.branch || '').toString()
+      const isOwner = orderBranch ? orderBranch === ownBranch : order.merchant.toString() === user._id.toString()
+      if (!isOwner) return NextResponse.json({ error: 'Forbidden — not your branch order' }, { status: 403 })
+    } else if (order.merchant.toString() !== user._id.toString()) {
+      // Admin owns orders via branch merchants — allow if order belongs to any branch managed by admin
+      // Admin can manage all, so no merchant check needed; keep permissive for admin
+    }
     order.status = status
     await order.save()
     await Activity.create({
       merchant: user._id.toString(),
+      branch: user.role === 'branch' ? (user.branch?.toString() || order.branch || '') : (order.branch || ''),
       user: user._id.toString(),
       action: 'order_status_updated',
       detail: `Order ${orderId} → ${status}`,

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(nextauthOptions)
     if (!session?.user?._id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { productId, newPrice, reason, referenceId } = await req.json()
     const priceNum = Number(newPrice)
@@ -22,9 +22,15 @@ export async function POST(req: NextRequest) {
     if (isNaN(priceNum) || priceNum < 0) return NextResponse.json({ error: 'Price must be >= 0' }, { status: 400 })
     // reason optional but if price drops maybe require? We'll allow empty but warn
 
-    const product = await Product.findById(productId)
+    const product: any = await Product.findById(productId)
     if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
-    if (product.merchant.toString() !== user._id.toString()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if ((user as any).role === 'branch') {
+      const ownBranch = (user as any).branch ? (user as any).branch.toString() : ''
+      const prodBranch = (product.branch || '').toString()
+      const prodMerchant = (product.merchant || '').toString()
+      const isOwner = prodBranch === ownBranch || prodMerchant === (user as any)._id.toString()
+      if (!isOwner) return NextResponse.json({ error: 'Forbidden — not your branch product' }, { status: 403 })
+    }
 
     const previousPrice = Number(product.price.toString())
     if (previousPrice === priceNum) return NextResponse.json({ error: 'New price same as current' }, { status: 400 })
@@ -41,6 +47,7 @@ export async function POST(req: NextRequest) {
             {
               productId: product._id,
               merchant: product.merchant.toString(),
+              branch: product.branch || (user as any).branch?.toString() || '',
               previousPrice,
               newPrice: priceNum,
               reason: reason || '',
@@ -73,6 +80,7 @@ export async function POST(req: NextRequest) {
         ph = await PriceHistory.create({
           productId: product._id,
           merchant: product.merchant.toString(),
+          branch: product.branch || (user as any).branch?.toString() || '',
           previousPrice,
           newPrice: priceNum,
           reason: reason || '',

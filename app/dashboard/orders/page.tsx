@@ -22,6 +22,7 @@ import { useGetDashboardOrderQuery, useUpdateOrderStatusMutation } from '@/store
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import toast from 'react-hot-toast'
 import OrderInfoLayout from '@/components/shared/order-info-layout'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
 
 function Orders() {
   const { data: session } = useSession()
@@ -29,8 +30,16 @@ function Orders() {
   const [activeOrder, setActiveOrder] = useState<any>()
   const [nextStatus, setNextStatus] = useState('')
   const merchant = session?.user?._id || ''
+  const role = (session as any)?.user?.role
+  const isAdmin = role === 'admin'
+  const isBranch = role === 'branch'
+  const ownBranchId = (session as any)?.user?.branch ? String((session as any).user.branch) : ''
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const effectiveBranchParam = isBranch ? ownBranchId : isAdmin ? branchId : undefined
   const { data: ordersData, isLoading: isFetchingOrders, refetch } = useGetDashboardOrderQuery(
-    { merchantId: merchant },
+    { merchantId: merchant, branchId: effectiveBranchParam },
     { skip: !merchant }
   )
   const [updateStatus, { isLoading: isUpdating }] = useUpdateOrderStatusMutation()
@@ -184,11 +193,21 @@ function Orders() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-bold tracking-tight text-[#1F2937]">Orders</h1>
-          <p className="text-[13px] text-[#6B7280]">Track and manage customer orders</p>
+          <h1 className="text-[20px] font-bold tracking-tight text-[#1F2937]">Orders {isBranch ? `— ${(session as any)?.user?.branchName || 'Your Branch'}` : ''}</h1>
+          <p className="text-[13px] text-[#6B7280]">{isBranch ? 'Only orders for your branch.' : isAdmin ? 'Track and manage customer orders — filter by branch.' : 'Track and manage customer orders'}</p>
         </div>
+        {isAdmin && branches.length > 0 && (
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {isBranch && ownBranchId && <div className="rounded-full bg-[#F5F5F7] border border-gray-200 px-3 py-1.5 text-[12px] font-medium text-[#1D1D1F]">{(session as any)?.user?.branchName || ownBranchId}</div>}
       </div>
       <div className="rounded-[14px] border border-gray-100 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.05)] overflow-hidden p-2">
         <DataTable columns={columns} data={order} />

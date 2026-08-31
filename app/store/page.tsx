@@ -18,6 +18,8 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { useToggle } from '@/hooks/useToggle'
 import { Separator } from '@/components/ui/separator'
 import { useSession } from 'next-auth/react'
+import { useBranch } from '@/hooks/useBranch'
+import { BranchSelector, CurrentBranchBanner } from '@/components/branch/branch-selector'
 
 export default function Store({ searchParams: { storeId } }: StoreProps) {
   const router = useRouter()
@@ -28,13 +30,14 @@ export default function Store({ searchParams: { storeId } }: StoreProps) {
   const [addToCart] = useAddToCartMutation()
   // Apple Avenue is single-merchant — storeId is legacy; fallback to singleton via API when undefined
   const resolvedStoreId = storeId ?? undefined
+  const { currentId: branchId, currentBranch } = useBranch()
   const { data: session } = useSession()
   const { data: cartItems, isLoading: isFetchingCart } = useGetStoreCartQuery(
-    resolvedStoreId ? { merchantId: resolvedStoreId } : {},
+    branchId ? { branchId } : resolvedStoreId ? { merchantId: resolvedStoreId } : {},
     { skip: !session?.user }
   )
   const { data: productData, isLoading: isFetchingProduct } = useGetStoreProductQuery(
-    resolvedStoreId ? { merchantId: resolvedStoreId } : {}
+    branchId ? { branchId } : resolvedStoreId ? { merchantId: resolvedStoreId } : {}
   )
 
   const userCart = useMemo(
@@ -67,13 +70,13 @@ export default function Store({ searchParams: { storeId } }: StoreProps) {
 
   const handleAddClick = useCallback(
     async (cartItem: CartItemProps) => {
+      const branchMerchant = (currentBranch as any)?.manager?.toString() || (currentBranch as any)?.manager || ''
       await addToCart({
-        // merchant param optional — singleton resolved server-side
-        merchant: (resolvedStoreId as string) ?? '',
+        merchant: branchMerchant || (resolvedStoreId as string) || '',
         item: [cartItem],
       })
     },
-    [addToCart, resolvedStoreId]
+    [addToCart, resolvedStoreId, currentBranch]
   )
 
   const cartLayout = () => (
@@ -145,13 +148,19 @@ export default function Store({ searchParams: { storeId } }: StoreProps) {
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
+      <CurrentBranchBanner />
       <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 sm:gap-6">
           {/* Main — Single merchant Apple Avenue, no store profile/banner needed per spec */}
           <div className="lg:col-span-5 col-span-1 flex flex-col gap-4 sm:gap-5 min-w-0">
             <div className="rounded-[14px] border border-gray-100 bg-white px-5 py-4 shadow-[0_4px_18px_rgba(15,23,42,0.05)]">
-              <h1 className="text-[18px] font-bold tracking-tight text-[#1D1D1F]">Apple Avenue — All Devices</h1>
-              <p className="text-[12.5px] text-[#6E6E73]">Single official store • Authentic, warranty-backed • Edit featured products & slider banners in Dashboard</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h1 className="text-[18px] font-bold tracking-tight text-[#1D1D1F]">Apple Avenue — All Devices</h1>
+                  <p className="text-[12.5px] text-[#6E6E73]">{currentBranch ? `${currentBranch.name} • ${currentBranch.address}` : 'Select branch to see accurate stock • Authentic, warranty-backed'}</p>
+                </div>
+                <BranchSelector />
+              </div>
             </div>
 
             <div className="grid grid-cols-12 gap-5">

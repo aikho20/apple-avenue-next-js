@@ -32,19 +32,20 @@ export const storeApi = apiSlice.injectEndpoints({
       invalidatesTags: [{ type: 'Cart', id: 'LIST' }],
     }),
     getStoreProduct: builder.query({
-      query: ({ merchantId }: ProductStoreQuery = {}) => ({
+      query: ({ merchantId, branchId }: ProductStoreQuery & { branchId?: string } = {}) => ({
         url: `/api/store/get-store-product`,
         method: 'POST',
-        body: { merchantId },
+        body: { merchantId, branchId },
       }),
       providesTags: [{ type: 'Product', id: 'LIST' }],
     }),
     getStoreCart: builder.query({
-      query: ({ merchantId }: { merchantId?: string } = {}) => ({
+      query: ({ merchantId, branchId }: { merchantId?: string; branchId?: string } = {}) => ({
         url: `/api/store/get-cart`,
         method: 'POST',
         body: {
           merchantId,
+          branchId,
         },
       }),
       providesTags: [{ type: 'Cart', id: 'LIST' }],
