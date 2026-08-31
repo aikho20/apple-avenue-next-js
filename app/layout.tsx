@@ -41,7 +41,6 @@ export default function RootLayout({
             <Header />
             <div>{children}</div>
             <Footer />
-            <MobileControls />
           </AuthProvider>
           <Toaster position='top-center' />
         </StoreProvider>
