@@ -21,8 +21,8 @@ async function handle(req: NextRequest) {
     if (!session?.user?._id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') {
+    const user: any = await User.findById(session.user._id)
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     let body: any = {}
@@ -33,10 +33,34 @@ async function handle(req: NextRequest) {
     const search = (url.searchParams.get('search') || body.search || '').toString().trim()
     const statusFilter = (url.searchParams.get('status') || body.status || '').toString()
     const categoryFilter = (url.searchParams.get('category') || body.category || '').toString()
+    const branchIdParam = (url.searchParams.get('branchId') || body.branchId || '').toString()
     const merchantId = await resolveMerchantId(body.merchantId || url.searchParams.get('merchantId'))
 
     const filter: any = {}
-    if (merchantId) filter.merchant = merchantId
+    // Branch-aware filtering
+    if (user.role === 'branch') {
+      const branchId = user.branch ? user.branch.toString() : ''
+      filter.$or = [{ merchant: user._id.toString() }, { branch: branchId }]
+    } else if (branchIdParam) {
+      if (branchIdParam === 'all') {
+        // no merchant filter - show all
+      } else {
+        // specific branch: find its manager
+        const Branch = (await import('@/lib/model/branch.model')).default
+        const br: any = await Branch.findById(branchIdParam).lean().catch(() => null)
+        if (br) {
+          const managerId = br.manager?.toString()
+          filter.$or = [{ branch: branchIdParam }, { merchant: managerId }]
+        } else {
+          filter.branch = branchIdParam
+        }
+      }
+    } else if (merchantId && user.role !== 'admin') {
+      filter.merchant = merchantId
+    } else if (merchantId && user.role === 'admin') {
+      // admin with no branch filter after transfer: show all (branch products have different merchant)
+      // keep filter empty to show all
+    }
     if (categoryFilter) filter.category = categoryFilter
     // statusFilter for inventory status is computed, so handle later; product status fallback
     let products = await Product.find(filter).sort({ updatedAt: -1 }).lean()

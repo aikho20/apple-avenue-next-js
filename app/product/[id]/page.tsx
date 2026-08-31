@@ -9,6 +9,8 @@ import { useSession } from 'next-auth/react'
 import { useWishlist } from '@/hooks/useWishlist'
 import { useCompare } from '@/hooks/useCompare'
 import toast from 'react-hot-toast'
+import { useBranch } from '@/hooks/useBranch'
+import { CurrentBranchBanner } from '@/components/branch/branch-selector'
 
 interface Specs {
   display?: { size: string; resolution?: string; refreshRate?: string; panelType?: string }
@@ -26,9 +28,10 @@ interface Specs {
 export default function ProductDetailPage() {
   const params = useParams() as { id: string }
   const router = useRouter()
-  const { data, isLoading } = useGetStoreProductQuery({})
+  const { currentId: branchId, currentBranch } = useBranch()
+  const { data, isLoading } = useGetStoreProductQuery(branchId ? { branchId } : {})
   const { data: session } = useSession()
-  const { data: cart } = useGetStoreCartQuery({}, { skip: !session?.user })
+  const { data: cart } = useGetStoreCartQuery(branchId ? { branchId } : {}, { skip: !session?.user })
   const [addToCart] = useAddToCartMutation()
   const { isWishlisted, toggle: toggleWishlist } = useWishlist()
   const { isCompared, toggle: toggleCompare, count: compareCount, max: compareMax } = useCompare()
@@ -53,8 +56,9 @@ export default function ProductDetailPage() {
   }
   if (!product) {
     return (
-      <div className="w-full bg-[#FCFCFC] min-h-[50vh] flex items-center justify-center px-6 py-10">
-        <div className="text-center"><p className="text-[13px] text-[#6E6E73]">Product not found.</p><Button variant="outline" className="mt-3" onClick={()=>router.push('/store')}>Back to store</Button></div>
+      <div className="w-full bg-[#FCFCFC] min-h-[50vh] flex flex-col items-center justify-center px-6 py-10">
+        <CurrentBranchBanner />
+        <div className="text-center mt-6"><p className="text-[13px] text-[#6E6E73]">Product not found{branchId && currentBranch ? ` at ${currentBranch.name}` : ''} — may be stocked at another branch.</p><p className="text-[11px] text-[#86868b]">Try changing branch via the header.</p><Button variant="outline" className="mt-3" onClick={()=>router.push('/store')}>Back to store</Button></div>
       </div>
     )
   }
@@ -63,6 +67,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
+      <CurrentBranchBanner />
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Gallery */}
         <div className="rounded-[14px] border border-gray-100 bg-white p-3 sm:p-4 shadow-[0_4px_18px_rgba(15,23,42,0.05)]">
@@ -89,7 +94,7 @@ export default function ProductDetailPage() {
             <p className="text-[12px] text-[#6E6E73] mt-1">₱{monthly.toLocaleString()}/mo with installment — estimate only, not an offer.</p>
             <div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#F5F5F7] px-2.5 py-1">Storage variants • 128GB • 256GB • 512GB</span><span className="rounded-full bg-[#F5F5F7] px-2.5 py-1">Colors • Black • Silver • Blue</span><span className="rounded-full bg-[#F5F5F7] px-2.5 py-1 inline-flex gap-1"><BadgeCheck className="h-3 w-3" /> Authentic</span><span className="rounded-full bg-[#F5F5F7] px-2.5 py-1 inline-flex gap-1"><ShieldCheck className="h-3 w-3" /> Warranty</span><span className="rounded-full bg-[#F5F5F7] px-2.5 py-1 inline-flex gap-1"><Truck className="h-3 w-3" /> Insured delivery</span></div>
             <div className="mt-4 flex gap-2">
-              <Button className="flex-1 bg-[#111111] hover:bg-black" onClick={()=>addToCart({ merchant:'', item:[{_id: product._id, value: cartVal + qty}]})}>Add to Cart • {cartVal||0} in cart</Button>
+              <Button className="flex-1 bg-[#111111] hover:bg-black" onClick={()=>{ const m=(currentBranch as any)?.manager?.toString()||''; addToCart({ merchant:m, item:[{_id: product._id, value: cartVal + qty}]})}}>Add to Cart • {cartVal||0} in cart {currentBranch? `• ${currentBranch.name}`:''}</Button>
               <Button variant="outline" onClick={()=>router.push(`/store/checkout?id=${cart?.cartId||''}`)}>Buy Now</Button>
             </div>
             <div className="mt-2 flex gap-2">

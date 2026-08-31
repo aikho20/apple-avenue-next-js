@@ -10,7 +10,7 @@ import { ProductCardProps } from '@/types/type'
 export async function POST(req: NextRequest) {
   try {
     await connectDB()
-    const { merchantId: provided } = await req.json().catch(() => ({}))
+    const { merchantId: provided, branchId } = await req.json().catch(() => ({}))
     const session = await getServerSession(nextauthOptions)
 
     if (!session?.user?._id) {
@@ -22,9 +22,18 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized!' }, { status: 401 })
     }
+    // Branch-aware: if branchId provided, resolve to branch manager merchant
+    let resolvedProvided = provided as string | null | undefined
+    if (branchId) {
+      try {
+        const Branch = (await import('@/lib/model/branch.model')).default
+        const branchDoc: any = await Branch.findById(branchId).lean().catch(() => null)
+        if (branchDoc?.manager) resolvedProvided = branchDoc.manager.toString()
+      } catch {}
+    }
     // Apple Avenue — single merchant fallback
     const { resolveMerchantId } = await import('@/lib/merchant')
-    const merchantId = await resolveMerchantId(provided)
+    const merchantId = await resolveMerchantId(resolvedProvided)
     if (!merchantId) {
       return NextResponse.json({ cart: [], total: 0, cartId: null }, { status: 200 })
     }

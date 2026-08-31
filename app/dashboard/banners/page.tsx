@@ -9,11 +9,19 @@ import { Image as ImageLucide, Plus, Trash2, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { fileBase64 } from '@/utils/helper'
 import { useGetDashboardBannersQuery, useCreateBannerMutation, useUpdateBannerMutation, useDeleteBannerMutation } from '@/store/action/bannerAction'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
+import { useSession } from 'next-auth/react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type Banner = { _id: string; title: string; subtitle: string; image: string; link: string; order: number; active: boolean }
 
 export default function BannersPage() {
-  const { data, isLoading: loading } = useGetDashboardBannersQuery({})
+  const { data: session } = useSession()
+  const isAdmin = (session as any)?.user?.role === 'admin'
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const { data, isLoading: loading } = useGetDashboardBannersQuery({ branchId: isAdmin ? branchId : undefined })
   const banners: Banner[] = data?.banners || []
   const [createBanner] = useCreateBannerMutation()
   const [updateBanner] = useUpdateBannerMutation()
@@ -26,12 +34,13 @@ export default function BannersPage() {
 
   const submit = async () => {
     if (!form.title || !form.image) return toast.error('Title and image required')
+    if (isAdmin && (!branchId || branchId === 'all')) return toast.error('Admin must select a branch before adding banner')
     try {
       if (editing) {
-        await updateBanner({ _id: editing._id, ...form }).unwrap()
+        await updateBanner({ _id: editing._id, ...form } as any).unwrap()
         toast.success('Banner updated')
       } else {
-        await createBanner(form).unwrap()
+        await createBanner({ ...form, branchId: isAdmin ? branchId : undefined } as any).unwrap()
         toast.success('Banner created')
       }
       setOpen(false); reset()
@@ -59,12 +68,20 @@ export default function BannersPage() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] flex items-center gap-2"><ImageLucide className="h-5 w-5" /> Banners — Image Slider</h1>
-          <p className="text-[13px] text-[#6E6E73]">Manage landing page slider. Images appear on homepage hero slider. Order controls sequence.</p>
+          <p className="text-[13px] text-[#6E6E73]">Manage landing page slider. {isAdmin ? 'Select branch before adding.' : 'Branch scoped.'} Order controls sequence.</p>
         </div>
-        <Button onClick={() => { reset(); setOpen(true) }}><Plus className="h-4 w-4 mr-1" /> New Banner</Button>
+        <div className="flex gap-2">
+          {isAdmin && branches.length > 0 && (
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Branches</SelectItem>{branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+          <Button onClick={() => { if (isAdmin && (branchId === 'all' || !branchId)) return toast.error('Admin must select a branch before adding banner'); reset(); setOpen(true) }}><Plus className="h-4 w-4 mr-1" /> New Banner</Button>
+        </div>
       </div>
 
       <div className="rounded-[14px] border border-gray-100 bg-white p-4">

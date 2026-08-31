@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     if (!session?.user?._id) {
       return NextResponse.json({ error: 'Unauthorized!' }, { status: 401 })
     }
-    const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') {
+    const user: any = await User.findById(session.user._id)
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -28,7 +28,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Product not found!' }, { status: 404 })
     }
 
-    if (product.merchant.toString() !== user._id.toString()) {
+    const isOwner = product.merchant.toString() === user._id.toString() || (product as any).branch?.toString() === (user.branch?.toString() || '')
+    const isAdmin = user.role === 'admin'
+    if (!isOwner && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
         await PriceHistory.create({
           productId: product._id,
           merchant: product.merchant.toString(),
+          branch: (product as any).branch || (user as any).branch?.toString() || '',
           previousPrice: prevPrice,
           newPrice: newPriceNum,
           reason: 'Price updated via product edit',
@@ -85,6 +88,7 @@ export async function POST(req: NextRequest) {
         await InventoryTransaction.create({
           productId: product._id,
           merchant: product.merchant.toString(),
+          branch: (product as any).branch || (user as any).branch?.toString() || '',
           type: 'ADJUSTMENT',
           quantityBefore: prevQty,
           quantityChange: delta,
@@ -98,6 +102,7 @@ export async function POST(req: NextRequest) {
 
     await Activity.create({
       merchant: user._id.toString(),
+      branch: (product as any).branch || (user as any).branch?.toString() || '',
       user: user._id.toString(),
       action: 'product_updated',
       detail: `Updated product ${productName || product.productName}`,

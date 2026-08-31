@@ -13,15 +13,33 @@ export async function POST(req: NextRequest) {
     if (!session?.user?._id) {
       return NextResponse.json({ error: 'Unauthorized!' }, { status: 401 })
     }
-    const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') {
+    const user: any = await User.findById(session.user._id)
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) {
       return NextResponse.json({ error: 'Unauthorized!' }, { status: 403 })
     }
 
-    const { productName, description, price, cost, quantity, images, category, status, isFeatured, isDeal, specs, sku, lowStockThreshold, reservedStock } = await req.json()
+    const { productName, description, price, cost, quantity, images, category, status, isFeatured, isDeal, specs, sku, lowStockThreshold, reservedStock, branch, branchId: bodyBranchId } = await req.json()
 
     if (!productName || !price || !category || quantity === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Admin must select branch before adding
+    let targetBranchId = ''
+    let targetMerchantId = user._id.toString()
+    if (user.role === 'branch') {
+      targetBranchId = user.branch ? user.branch.toString() : ''
+      if (!targetBranchId) return NextResponse.json({ error: 'Branch account has no branch assigned' }, { status: 400 })
+    } else if (user.role === 'admin') {
+      const requestedBranch = (bodyBranchId || branch || '').toString().trim()
+      if (!requestedBranch || requestedBranch === 'all') {
+        return NextResponse.json({ error: 'Admin must select a branch before adding product' }, { status: 400 })
+      }
+      const Branch = (await import('@/lib/model/branch.model')).default
+      const br: any = await Branch.findById(requestedBranch).lean()
+      if (!br) return NextResponse.json({ error: 'Branch not found' }, { status: 404 })
+      targetBranchId = br._id.toString()
+      targetMerchantId = br.manager ? br.manager.toString() : targetBranchId
     }
 
     const skuVal = (sku && String(sku).trim()) || `SKU-${Date.now().toString().slice(-6)}`
@@ -32,7 +50,7 @@ export async function POST(req: NextRequest) {
       description: description || '',
       price,
       cost: cost || 0,
-      merchant: user._id.toString(),
+      merchant: targetMerchantId,
       quantity: Number(quantity),
       status: status || 'Posted',
       isFeatured: !!isFeatured,
@@ -42,6 +60,7 @@ export async function POST(req: NextRequest) {
       lowStockThreshold: lowStockThreshold !== undefined ? Number(lowStockThreshold) : 5,
       reservedStock: reservedStock !== undefined ? Number(reservedStock) : 0,
       updatedBy: user._id.toString(),
+      branch: targetBranchId,
     })
 
     await newProduct.save()
@@ -53,12 +72,13 @@ export async function POST(req: NextRequest) {
       if (qty > 0) {
         await InventoryTransaction.create({
           productId: newProduct._id,
-          merchant: user._id.toString(),
+          merchant: targetMerchantId,
           type: 'INITIAL_STOCK',
           quantityBefore: 0,
           quantityChange: qty,
           quantityAfter: qty,
           reason: 'Initial stock',
+          branch: targetBranchId,
           createdBy: user._id.toString(),
           createdByName: user.name || user.email || 'Admin',
         })
@@ -67,6 +87,7 @@ export async function POST(req: NextRequest) {
 
     await Activity.create({
       merchant: user._id.toString(),
+      branch: targetBranchId || (user as any).branch?.toString() || '',
       user: user._id.toString(),
       action: 'product_created',
       detail: `Created product ${productName}`,

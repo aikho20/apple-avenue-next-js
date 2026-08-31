@@ -55,6 +55,7 @@ export interface CartItemProps {
 }
 export interface ProductStoreQuery {
   merchantId?: string
+  branchId?: string
 }
 
 export interface CartProps {
@@ -117,6 +118,8 @@ export interface ProductFormProps {
   sku?: string
   reservedStock?: number
   lowStockThreshold?: number
+  branch?: string
+  branchId?: string
 }
 
 export interface ProductProps {

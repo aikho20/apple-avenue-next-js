@@ -1,10 +1,12 @@
 'use client'
 import { useState, useMemo } from 'react'
-import { Sparkles, Smartphone, Battery, Camera, Gamepad2, Search, Star, Zap, Monitor } from 'lucide-react'
+import { Sparkles, Smartphone, Battery, Camera, Gamepad2, Search, Star, Zap, Monitor, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
+import { useBranch } from '@/hooks/useBranch'
+import { CurrentBranchBanner } from '@/components/branch/branch-selector'
 
 type Check = { perf: boolean; battery: boolean; display: boolean; camera: boolean }
 
@@ -13,7 +15,8 @@ export default function PhoneFinderPage() {
   const [useG, setUseG] = useState('Gaming')
   const [checks, setChecks] = useState<Check>({ perf: true, battery: true, display: false, camera: false })
   const [searched, setSearched] = useState(false)
-  const { data } = useGetStoreProductQuery({})
+  const { currentId: branchId, currentBranch } = useBranch()
+  const { data } = useGetStoreProductQuery(branchId ? { branchId } : {})
   const all = (data?.product || []) as any[]
 
   const parseBudget = (b: string) => {
@@ -100,14 +103,18 @@ export default function PhoneFinderPage() {
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
+      <CurrentBranchBanner />
       <div className="mx-auto max-w-[1100px] px-6 py-8">
         <div className="rounded-[14px] border border-gray-100 bg-white p-6 lg:p-8 shadow-[0_4px_18px_rgba(15,23,42,0.05)]">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#111111]"><Sparkles className="h-4 w-4 text-white" /></div>
             <h1 className="text-[18px] font-bold tracking-tight text-[#1D1D1F]">Smart Phone Finder</h1>
             <span className="ml-2 rounded-full bg-[#F5F5F7] px-2.5 py-1 text-[11px] font-medium text-[#424245]">Guided recommendation • % match</span>
+            {currentBranch && <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-[#FFF7ED] border border-orange-200 px-2.5 py-1 text-[11px] font-medium text-[#9A3412]"><MapPin className="h-3 w-3" /> {currentBranch.name}</span>}
           </div>
-          <p className="mt-1 text-[12.5px] text-[#6E6E73]">Tell us your budget, usage and priorities — we match against real Apple Avenue inventory. No invented specs — scores from actual price, display, processor, battery, camera.</p>
+          <p className="mt-1 text-[12.5px] text-[#6E6E73]">
+            {currentBranch ? `Browsing ${currentBranch.name} • ${currentBranch.address} — we match against this branch's real inventory. No invented specs — scores from actual price, display, processor, battery, camera.` : 'Tell us your budget, usage and priorities — we match against real Apple Avenue inventory. No invented specs — scores from actual price, display, processor, battery, camera. Select a branch for accurate stock.'}
+          </p>
 
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="text-[11px] font-semibold text-[#424245]">Budget</label><select value={budget} onChange={e=>{setBudget(e.target.value); setSearched(false)}} className="mt-1 w-full h-[40px] rounded-[9px] border border-gray-100 bg-white px-3 text-[13px]"><option value="0-20000">₱0 – ₱20,000</option><option value="20000-30000">₱20,000 – ₱30,000</option><option value="30000-50000">₱30,000 – ₱50,000</option><option value="50000+">₱50,000+</option></select></div>

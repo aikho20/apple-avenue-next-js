@@ -2,6 +2,10 @@
 import { Card } from '@/components/ui/card'
 import { Clock, Package, ShoppingCart, Trash2, Pencil, Plus } from 'lucide-react'
 import { useGetActivityQuery } from '@/store/action/activityAction'
+import { useSession } from 'next-auth/react'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useState } from 'react'
 
 type Activity = { _id: string; action: string; detail: string; createdAt: string }
 
@@ -14,14 +18,35 @@ const iconMap: Record<string, any> = {
 }
 
 export default function ActivityHistoryPage() {
-  const { data, isLoading: loading } = useGetActivityQuery({})
+  const { data: session } = useSession()
+  const role = (session as any)?.user?.role
+  const isAdmin = role === 'admin'
+  const isBranch = role === 'branch'
+  const ownBranchId = (session as any)?.user?.branch ? String((session as any).user.branch) : ''
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const effectiveBranchId = isBranch ? ownBranchId : isAdmin ? branchId : undefined
+  const { data, isLoading: loading } = useGetActivityQuery(effectiveBranchId ? { branchId: effectiveBranchId } : {})
   const activities: Activity[] = data?.activities || []
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-[#1F2937]">Activity History</h1>
-        <p className="text-[13px] text-[#6B7280]">Track recent store activity</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[20px] font-bold tracking-tight text-[#1F2937]">Activity History {isBranch ? `— ${(session as any)?.user?.branchName || 'Your Branch'}` : ''}</h1>
+          <p className="text-[13px] text-[#6B7280]">{isBranch ? 'Only activity for your branch.' : isAdmin ? 'Track recent store activity — filter by branch.' : 'Track recent store activity'}</p>
+        </div>
+        {isAdmin && branches.length > 0 && (
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {isBranch && ownBranchId && <div className="rounded-full bg-[#F5F5F7] border border-gray-200 px-3 py-1.5 text-[12px] font-medium text-[#1D1D1F]">{(session as any)?.user?.branchName || ownBranchId}</div>}
       </div>
 
       <Card className="divide-y divide-gray-50">

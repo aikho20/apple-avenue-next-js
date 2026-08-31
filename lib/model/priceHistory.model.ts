@@ -4,6 +4,7 @@ const priceHistorySchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     merchant: { type: String, required: true, index: true },
+    branch: { type: String, default: '', index: true },
     previousPrice: { type: Number, required: true },
     newPrice: { type: Number, required: true },
     reason: { type: String, default: '' },

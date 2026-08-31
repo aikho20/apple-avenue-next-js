@@ -7,7 +7,7 @@ export const warrantyApi = apiSlice.injectEndpoints({
       providesTags: [{ type: 'Warranty', id: 'LIST' }],
     }),
     getDashboardWarranties: builder.query({
-      query: () => ({ url: '/api/store/dashboard/warranty', method: 'GET' }),
+      query: ({ branchId }: { branchId?: string } = {}) => ({ url: `/api/store/dashboard/warranty${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ''}`, method: 'GET' }),
       providesTags: [{ type: 'Warranty', id: 'ADMIN' }],
     }),
     createWarranty: builder.mutation({
@@ -27,7 +27,7 @@ export const warrantyApi = apiSlice.injectEndpoints({
       invalidatesTags: [{ type: 'Warranty', id: 'ADMIN' }, { type: 'Warranty', id: 'LIST' }],
     }),
     createDashboardWarranty: builder.mutation({
-      query: (body: { productId: string; imei: string; serialNumber: string; purchaseDate: string; orderId?: string; userId?: string; userEmail?: string }) => ({
+      query: (body: { productId: string; imei: string; serialNumber: string; purchaseDate: string; orderId?: string; userId?: string; userEmail?: string; branchId?: string }) => ({
         url: '/api/store/dashboard/warranty',
         method: 'POST',
         body,

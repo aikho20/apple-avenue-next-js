@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(nextauthOptions)
     if (!session?.user?._id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { productId, quantity, adjustment, reason, referenceId } = await req.json()
     const deltaRaw = quantity ?? adjustment
@@ -23,9 +23,15 @@ export async function POST(req: NextRequest) {
     if (delta === 0 || isNaN(delta) || !Number.isInteger(delta)) return NextResponse.json({ error: 'Adjustment must be a non-zero integer' }, { status: 400 })
     if (!reason || !reason.trim()) return NextResponse.json({ error: 'Reason is required' }, { status: 400 })
 
-    const product = await Product.findById(productId)
+    const product: any = await Product.findById(productId)
     if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
-    if (product.merchant.toString() !== user._id.toString()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if ((user as any).role === 'branch') {
+      const ownBranch = (user as any).branch ? (user as any).branch.toString() : ''
+      const prodBranch = (product.branch || '').toString()
+      const prodMerchant = (product.merchant || '').toString()
+      const isOwner = prodBranch === ownBranch || prodMerchant === (user as any)._id.toString()
+      if (!isOwner) return NextResponse.json({ error: 'Forbidden — not your branch product' }, { status: 403 })
+    }
 
     const quantityBefore = Number(product.quantity || 0)
     const quantityAfter = quantityBefore + delta
@@ -43,6 +49,7 @@ export async function POST(req: NextRequest) {
             {
               productId: product._id,
               merchant: product.merchant.toString(),
+              branch: product.branch || (user as any).branch?.toString() || '',
               type: 'ADJUSTMENT',
               quantityBefore,
               quantityChange: delta,
@@ -77,6 +84,7 @@ export async function POST(req: NextRequest) {
         tx = await InventoryTransaction.create({
           productId: product._id,
           merchant: product.merchant.toString(),
+          branch: product.branch || (user as any).branch?.toString() || '',
           type: 'ADJUSTMENT',
           quantityBefore,
           quantityChange: delta,

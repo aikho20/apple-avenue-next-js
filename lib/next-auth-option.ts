@@ -100,6 +100,8 @@ export const nextauthOptions: NextAuthOptions = {
               token._id = user._id
               token.role = user.role
               token.provider = user.provider
+              token.branch = (user as any).branch
+              token.branchName = (user as any).branchName
             }
           } catch {
             // DB down - return token as-is so session still works
@@ -118,6 +120,8 @@ export const nextauthOptions: NextAuthOptions = {
           _id: token._id,
           role: token.role,
           provider: token.provider,
+          branch: (token as any).branch,
+          branchName: (token as any).branchName,
         },
       }
     },

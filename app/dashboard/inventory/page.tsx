@@ -11,19 +11,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Image from 'next/image'
-import { Search, RefreshCw, Package, Plus, Minus, SlidersHorizontal, DollarSign, History, ArrowUpDown } from 'lucide-react'
+import { Search, RefreshCw, Package, Plus, Minus, SlidersHorizontal, DollarSign, History, ArrowUpDown, StoreIcon } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
 
 export default function InventoryPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [category, setCategory] = useState('all')
+  const [branchId, setBranchId] = useState('all')
   const [page, setPage] = useState(1)
   const pageSize = 10
   const [selected, setSelected] = useState<any>(null)
   const [action, setAction] = useState<'add' | 'remove' | 'adjust' | 'price' | null>(null)
   const [historyId, setHistoryId] = useState<string | null>(null)
+  const { data: session } = useSession()
+  const isAdmin = (session as any)?.user?.role === 'admin'
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
 
-  const { data, isLoading, isFetching, error, refetch } = useGetInventoryQuery({ search: search || undefined, status: status !== 'all' ? status : undefined, category: category !== 'all' ? category : undefined })
+  const { data, isLoading, isFetching, error, refetch } = useGetInventoryQuery({ search: search || undefined, status: status !== 'all' ? status : undefined, category: category !== 'all' ? category : undefined, branchId: isAdmin ? (branchId !== 'all' ? branchId : 'all') : undefined })
+  const canManage = !isAdmin || branchId !== 'all'
   const products: any[] = data?.products || []
   const stats = data?.stats
   const categories: string[] = data?.categories || []
@@ -32,7 +40,7 @@ export default function InventoryPage() {
   const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1)
   const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page])
 
-  const onSearchReset = () => { setSearch(''); setStatus('all'); setCategory('all'); setPage(1) }
+  const onSearchReset = () => { setSearch(''); setStatus('all'); setCategory('all'); setBranchId('all'); setPage(1) }
 
   return (
     <div className="w-full flex flex-col gap-4 min-w-0">
@@ -45,6 +53,9 @@ export default function InventoryPage() {
       </div>
 
       <InventoryStats stats={stats} isLoading={isLoading} />
+      {isAdmin && !canManage && (
+        <div className="rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">Admin must select a branch before managing inventory — choose a branch from the dropdown.</div>
+      )}
 
       <Card className="p-3 sm:p-4 space-y-3 overflow-hidden">
         <div className="flex flex-col gap-3">
@@ -52,7 +63,16 @@ export default function InventoryPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
             <Input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search product or SKU..." className="pl-9" />
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+            {isAdmin && branches.length > 0 && (
+              <Select value={branchId} onValueChange={v => { setBranchId(v); setPage(1) }}>
+                <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={status} onValueChange={v => { setStatus(v); setPage(1) }}>
               <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
@@ -135,10 +155,10 @@ export default function InventoryPage() {
                       <td className="px-3 py-2 hidden xl:table-cell text-[11px] text-[#6E6E73]">{p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '—'}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => { setSelected(p); setAction('add') }}><Plus className="h-3 w-3 mr-1" />Add</Button>
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => { setSelected(p); setAction('remove') }}><Minus className="h-3 w-3 mr-1" />Remove</Button>
-                          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => { setSelected(p); setAction('adjust') }}><SlidersHorizontal className="h-3 w-3" /></Button>
-                          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => { setSelected(p); setAction('price') }}><DollarSign className="h-3 w-3" /></Button>
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" disabled={!canManage} onClick={() => { if (!canManage) return; setSelected(p); setAction('add') }}><Plus className="h-3 w-3 mr-1" />Add</Button>
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" disabled={!canManage} onClick={() => { if (!canManage) return; setSelected(p); setAction('remove') }}><Minus className="h-3 w-3 mr-1" />Remove</Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={!canManage} onClick={() => { if (!canManage) return; setSelected(p); setAction('adjust') }}><SlidersHorizontal className="h-3 w-3" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={!canManage} onClick={() => { if (!canManage) return; setSelected(p); setAction('price') }}><DollarSign className="h-3 w-3" /></Button>
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setHistoryId(historyId === p._id ? null : p._id)}><History className="h-3 w-3" /></Button>
                         </div>
                       </td>

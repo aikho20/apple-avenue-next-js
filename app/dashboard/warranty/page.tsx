@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
 import { useSession } from 'next-auth/react'
 import { useGetDashboardWarrantiesQuery, useUpdateWarrantyMutation, useDeleteDashboardWarrantyMutation, useCreateDashboardWarrantyMutation } from '@/store/action/warrantyAction'
+import { useGetDashboardBranchesQuery } from '@/store/action/branchAction'
 
 type Warranty = {
   _id: string
@@ -29,7 +30,12 @@ type Warranty = {
 }
 
 export default function WarrantyDashboardPage() {
-  const { data: warrantyData, isLoading: loading } = useGetDashboardWarrantiesQuery({})
+  const { data: session } = useSession()
+  const isAdmin = (session as any)?.user?.role === 'admin'
+  const [branchId, setBranchId] = useState('all')
+  const { data: branchData } = useGetDashboardBranchesQuery({}, { skip: !isAdmin })
+  const branches: any[] = branchData?.branches || []
+  const { data: warrantyData, isLoading: loading } = useGetDashboardWarrantiesQuery({ branchId: isAdmin ? branchId : undefined })
   const warranties: Warranty[] = warrantyData?.warranties || []
   const [updateWarranty] = useUpdateWarrantyMutation()
   const [deleteWarranty] = useDeleteDashboardWarrantyMutation()
@@ -38,9 +44,8 @@ export default function WarrantyDashboardPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ userEmail: '', productId: '', orderId: '', imei: '', serialNumber: '', purchaseDate: new Date().toISOString().slice(0, 10) })
-  const { data: session } = useSession()
   const merchant = (session as any)?.user?._id || ''
-  const { data: productData } = useGetStoreProductQuery({ merchantId: merchant })
+  const { data: productData } = useGetStoreProductQuery(isAdmin && branchId !== 'all' ? { branchId } : isAdmin && branchId === 'all' ? { branchId: 'all' } as any : { merchantId: merchant })
   const products: any[] = (productData?.product || []) as any[]
 
   const updateStatus = async (id: string, status: string) => {
@@ -73,8 +78,9 @@ export default function WarrantyDashboardPage() {
 
   const register = async () => {
     if (!form.userEmail || !form.productId || !form.imei || !form.serialNumber || !form.purchaseDate) return toast.error('All fields required: customer email, product, IMEI, serial, purchase date')
+    if (isAdmin && (!branchId || branchId === 'all')) return toast.error('Admin must select a branch before registering warranty')
     try {
-      await createWarranty({ userEmail: form.userEmail, productId: form.productId, orderId: form.orderId || undefined, imei: form.imei, serialNumber: form.serialNumber, purchaseDate: form.purchaseDate }).unwrap()
+      await createWarranty({ userEmail: form.userEmail, productId: form.productId, orderId: form.orderId || undefined, imei: form.imei, serialNumber: form.serialNumber, purchaseDate: form.purchaseDate, branchId: isAdmin ? branchId : undefined } as any).unwrap()
       toast.success('Warranty registered for customer')
       setShowForm(false)
       setForm({ userEmail: '', productId: '', orderId: '', imei: '', serialNumber: '', purchaseDate: new Date().toISOString().slice(0, 10) })
@@ -85,13 +91,19 @@ export default function WarrantyDashboardPage() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Warranty — Admin Only</h1>
-          <p className="text-[13px] text-[#6E6E73]">Only admin can register device warranties. Create, update status, extend, void, or delete. Tied to real orders/products.</p>
+          <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Warranty — {isAdmin ? 'Admin' : 'Branch'}</h1>
+          <p className="text-[13px] text-[#6E6E73]">Only admin/branch can register device warranties. {isAdmin ? 'Select branch before registering.' : 'Branch scoped.'}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setShowForm(!showForm)} className="bg-[#111111] hover:bg-black"><Plus className="h-3.5 w-3.5 mr-1" /> {showForm ? 'Close' : 'Register Device'}</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && branches.length > 0 && (
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Branches</SelectItem>{branches.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+          <Button size="sm" onClick={() => { if (isAdmin && (!branchId || branchId === 'all')) return toast.error('Admin must select a branch before registering warranty'); setShowForm(!showForm) }} className="bg-[#111111] hover:bg-black"><Plus className="h-3.5 w-3.5 mr-1" /> {showForm ? 'Close' : 'Register Device'}</Button>
           <span className="text-[12px] bg-[#F5F5F7] rounded-full px-3 py-1 text-[#6E6E73]">{filtered.length} / {warranties.length}</span>
         </div>
       </div>

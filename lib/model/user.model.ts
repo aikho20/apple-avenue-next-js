@@ -19,11 +19,21 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
+      enum: ['user', 'admin', 'branch'],
       default: 'user',
     },
     provider: {
       type: String,
       default: 'credentials',
+    },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+    },
+    branchName: {
+      type: String,
+      default: '',
     },
     shippingAddress: {
       type: Array,

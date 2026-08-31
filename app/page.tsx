@@ -17,6 +17,8 @@ import {
 import { useSession } from 'next-auth/react'
 import BannerSlider from '@/components/ui/banner-slider'
 import { useGetCollectionsQuery } from '@/store/action/collectionAction'
+import { useBranch } from '@/hooks/useBranch'
+import { CurrentBranchBanner } from '@/components/branch/branch-selector'
 
 const features = [
   {
@@ -49,9 +51,10 @@ export default function Home() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const query = (searchParams.get('search') || '').toLowerCase()
-  const { data: productData, isLoading: isFetchingProducts } = useGetStoreProductQuery({})
+  const { currentId: selectedBranchId, currentBranch } = useBranch()
+  const { data: productData, isLoading: isFetchingProducts } = useGetStoreProductQuery({ branchId: selectedBranchId || undefined })
   const { data: session } = useSession()
-  const { data: cartData } = useGetStoreCartQuery({}, { skip: !session?.user })
+  const { data: cartData } = useGetStoreCartQuery(selectedBranchId ? { branchId: selectedBranchId } : {}, { skip: !session?.user })
   const [addToCart] = useAddToCartMutation()
 
   const products = useMemo(() => {
@@ -75,13 +78,14 @@ export default function Home() {
     [productData?.product],
   )
 
-  const { data: collectionsData } = useGetCollectionsQuery({}, { refetchOnMountOrArgChange: true, refetchOnFocus: true, refetchOnReconnect: true, pollingInterval: 15000 })
+  const { data: collectionsData } = useGetCollectionsQuery({ branchId: selectedBranchId || undefined }, { refetchOnMountOrArgChange: true, refetchOnFocus: true, refetchOnReconnect: true, pollingInterval: 15000 })
   const collections = (collectionsData?.collections || []).filter(
     (c: any) => c.products && c.products.length > 0,
   )
 
   return (
     <div className='w-full bg-white'>
+      <CurrentBranchBanner />
       {/* HERO — Apple Avenue Premium Editorial */}
       <section className='relative w-full overflow-hidden bg-[#FBFBFD] border-b border-gray-100'>
         {/* Premium mesh gradients */}
@@ -503,12 +507,14 @@ export default function Home() {
                     status={item.status}
                     value={cartVal}
                     isLoading={false}
-                    onButtonAddClick={() =>
-                      addToCart({ merchant: '', item: [{ _id: item._id, value: cartVal + 1 }] })
-                    }
-                    onButtonMinusClick={() =>
-                      addToCart({ merchant: '', item: [{ _id: item._id, value: cartVal - 1 }] })
-                    }
+                    onButtonAddClick={() => {
+                      const m = (currentBranch as any)?.manager?.toString() || ''
+                      return addToCart({ merchant: m, item: [{ _id: item._id, value: cartVal + 1 }] })
+                    }}
+                    onButtonMinusClick={() => {
+                      const m = (currentBranch as any)?.manager?.toString() || ''
+                      return addToCart({ merchant: m, item: [{ _id: item._id, value: cartVal - 1 }] })
+                    }}
                   />
                 )
               })}
@@ -518,12 +524,12 @@ export default function Home() {
               <p className='text-[13px] text-[#6E6E73]'>
                 {query
                   ? `No devices found for "${query}"`
-                  : 'No Featured Collection yet — admin has not marked any products as Featured.'}
+                  : currentBranch ? `No Featured devices at ${currentBranch.name} — branch has no featured stock yet.` : 'No Featured Collection yet — admin has not marked any products as Featured.'}
               </p>
               <p className='text-[12px] text-[#86868b] pt-1'>
                 {query
                   ? 'Try searching for iPhone, Mac or iPad'
-                  : 'Admin: Dashboard → Featured to create custom landing collection; Dashboard → Products → Edit → tick Featured. All Featured/Deals are admin-driven.'}
+                  : currentBranch ? `Admin: add Featured products to ${currentBranch.name} via Dashboard → Featured / Products.` : 'Admin: Dashboard → Featured to create custom landing collection; Dashboard → Products → Edit → tick Featured. All Featured/Deals are admin-driven.'}
               </p>
               <button
                 onClick={() => router.push('/store')}
@@ -606,18 +612,20 @@ export default function Home() {
                           status={item.status}
                           value={cartVal}
                           isLoading={false}
-                          onButtonAddClick={() =>
-                            addToCart({
-                              merchant: '',
+                          onButtonAddClick={() => {
+                            const m = (currentBranch as any)?.manager?.toString() || ''
+                            return addToCart({
+                              merchant: m,
                               item: [{ _id: item._id, value: cartVal + 1 }],
                             })
-                          }
-                          onButtonMinusClick={() =>
-                            addToCart({
-                              merchant: '',
+                          }}
+                          onButtonMinusClick={() => {
+                            const m = (currentBranch as any)?.manager?.toString() || ''
+                            return addToCart({
+                              merchant: m,
                               item: [{ _id: item._id, value: cartVal - 1 }],
                             })
-                          }
+                          }}
                         />
                       )
                     })}

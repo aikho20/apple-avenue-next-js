@@ -4,18 +4,38 @@ import Collection from '@/lib/model/collection.model'
 import Product from '@/lib/model/product.model'
 import { resolveMerchantId } from '@/lib/merchant'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectDB()
-    const merchantId = await resolveMerchantId()
-    if (!merchantId) return NextResponse.json({ collections: [] }, { status: 200 })
-    const cols = await Collection.find({ merchant: merchantId }).sort({ createdAt: -1 }).lean()
+    const { searchParams } = new URL(req.url)
+    const branchId = searchParams.get('branchId')
+    let filter: any = {}
+    if (branchId) {
+      if (branchId === 'all') filter = {}
+      else {
+        const Branch = (await import('@/lib/model/branch.model')).default
+        const br: any = await Branch.findById(branchId).lean().catch(() => null)
+        if (br) filter = { $or: [{ branch: branchId }, { merchant: br.manager?.toString() }] }
+        else filter = { branch: branchId }
+      }
+    } else {
+      const merchantId = await resolveMerchantId()
+      if (!merchantId) return NextResponse.json({ collections: [] }, { status: 200 })
+      filter = { merchant: merchantId }
+    }
+    const cols = await Collection.find(filter).sort({ createdAt: -1 }).lean()
     // Populate products for each collection
     const withProducts = await Promise.all(
       cols.map(async (c: any) => {
         const ids: string[] = c.productIds || []
         if (ids.length === 0) return { ...c, products: [] }
-        const prods = await Product.find({ _id: { $in: ids }, merchant: merchantId, status: 'Posted' }).lean()
+        const prodFilter: any = { _id: { $in: ids }, status: 'Posted' }
+        // if branch-specific, don't restrict by merchant to allow branch products
+        if (!branchId) {
+          const mId = await resolveMerchantId()
+          if (mId) prodFilter.merchant = mId
+        }
+        const prods = await Product.find(prodFilter).lean()
         const ordered = ids.map((id) => prods.find((p: any) => p._id.toString() === id)).filter(Boolean).map((p: any) => ({
           _id: p._id.toString(),
           productName: p.productName,

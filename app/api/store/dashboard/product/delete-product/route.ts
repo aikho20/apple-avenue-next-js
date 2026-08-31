@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
     if (!session?.user?._id) {
       return NextResponse.json({ error: 'Unauthorized!' }, { status: 401 })
     }
-    const user = await User.findById(session.user._id)
-    if (!user || user.role !== 'admin') {
+    const user: any = await User.findById(session.user._id)
+    if (!user || (user.role !== 'admin' && user.role !== 'branch')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Product not found!' }, { status: 404 })
     }
 
-    if (product.merchant.toString() !== user._id.toString()) {
+    const isOwner = product.merchant.toString() === user._id.toString() || (product as any).branch?.toString() === (user.branch?.toString() || '')
+    if (!isOwner && user.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
 
     await Activity.create({
       merchant: user._id.toString(),
+      branch: (product as any).branch || (user as any).branch?.toString() || '',
       user: user._id.toString(),
       action: 'product_deleted',
       detail: `Deleted product ${product.productName}`,

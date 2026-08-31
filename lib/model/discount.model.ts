@@ -9,6 +9,7 @@ const discountSchema = new mongoose.Schema(
     usageLimit: { type: Number, default: 100 },
     usedCount: { type: Number, default: 0 },
     merchant: { type: String, required: true },
+    branch: { type: String, default: '' },
     active: { type: Boolean, default: true },
     expiresAt: { type: Date },
   },

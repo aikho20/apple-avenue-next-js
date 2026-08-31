@@ -7,22 +7,44 @@ import Order from '@/lib/model/order.model'
 import { getServerSession } from 'next-auth'
 import { nextauthOptions } from '@/lib/next-auth-option'
 
-async function requireAdmin() {
+async function requireAuth() {
   const session = await getServerSession(nextauthOptions)
   if (!session?.user?._id) return { error: 'Unauthorized', status: 401 } as const
-  const user = await User.findById(session.user._id)
-  if (!user || user.role !== 'admin') return { error: 'Forbidden', status: 403 } as const
+  const user: any = await User.findById(session.user._id)
+  if (!user || (user.role !== 'admin' && user.role !== 'branch')) return { error: 'Forbidden', status: 403 } as const
   return { user } as const
 }
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB()
-    const auth: any = await requireAdmin()
+    const auth: any = await requireAuth()
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-    const { productId, imei, serialNumber, purchaseDate, orderId, userId, userEmail } = await req.json()
+    const { productId, imei, serialNumber, purchaseDate, orderId, userId, userEmail, branchId: bodyBranchId } = await req.json()
     if (!productId || !imei || !serialNumber || !purchaseDate)
       return NextResponse.json({ error: 'product, IMEI, serial and purchaseDate required' }, { status: 400 })
+
+    // Branch handling
+    let targetBranchId = ''
+    if (auth.user.role === 'branch') {
+      targetBranchId = auth.user.branch?.toString() || ''
+      if (!targetBranchId) return NextResponse.json({ error: 'Branch not assigned' }, { status: 400 })
+      // ensure product belongs to this branch
+      const prod: any = await Product.findById(productId)
+      if (!prod) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+      const prodBranch = (prod.branch || '').toString()
+      if (prodBranch && prodBranch !== targetBranchId && prod.merchant.toString() !== auth.user._id.toString()) {
+        return NextResponse.json({ error: 'Product not in your branch' }, { status: 403 })
+      }
+    } else if (auth.user.role === 'admin') {
+      const requested = (bodyBranchId || '').toString().trim()
+      if (!requested || requested === 'all') return NextResponse.json({ error: 'Admin must select a branch before registering warranty' }, { status: 400 })
+      const Branch = (await import('@/lib/model/branch.model')).default
+      const br: any = await Branch.findById(requested).lean()
+      if (!br) return NextResponse.json({ error: 'Branch not found' }, { status: 404 })
+      targetBranchId = br._id.toString()
+    }
+
     let targetUserId = userId
     let targetUserEmail = ''
     let isGuestEmail = false
@@ -33,14 +55,12 @@ export async function POST(req: NextRequest) {
         targetUserId = u._id.toString()
         targetUserEmail = u.email
       } else {
-        // Allow registration even if customer email not found — store email as identifier (guest warranty)
         targetUserId = cleanEmail
         targetUserEmail = cleanEmail
         isGuestEmail = true
       }
     }
     if (!targetUserId) return NextResponse.json({ error: 'Customer required (userId or userEmail)' }, { status: 400 })
-    // Only validate user existence if not a guest email
     if (!isGuestEmail) {
       const targetUser = await User.findById(targetUserId)
       if (!targetUser) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
@@ -68,6 +88,7 @@ export async function POST(req: NextRequest) {
     const now = new Date()
     const status = now > expiration ? 'Expired' : 'Active'
     const warranty = await Warranty.create({
+      branch: targetBranchId,
       user: targetUserId.toString(),
       product: productId.toString(),
       productName: product.productName,
@@ -86,13 +107,25 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectDB()
-    const auth: any = await requireAdmin()
+    const auth: any = await requireAuth()
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-    const warranties = await Warranty.find({}).sort({ createdAt: -1 })
-    // Populate user email for admin view
+    const { searchParams } = new URL(req.url)
+    const branchId = searchParams.get('branchId')
+    let filter: any = {}
+    if (auth.user.role === 'branch') {
+      const bId = auth.user.branch?.toString() || ''
+      filter = { branch: bId }
+    } else if (branchId) {
+      if (branchId === 'all') filter = {}
+      else filter = { branch: branchId }
+    } else {
+      // admin default: all
+      filter = {}
+    }
+    const warranties = await Warranty.find(filter).sort({ createdAt: -1 })
     const withUser = await Promise.all(
       warranties.map(async (w: any) => {
         const u = await User.findById(w.user).select('email name')
@@ -108,11 +141,13 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     await connectDB()
-    const auth: any = await requireAdmin()
+    const auth: any = await requireAuth()
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
     const { _id, status, notes, warrantyExpiration } = await req.json()
     if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 })
-    const w: any = await Warranty.findById(_id)
+    const filter: any = { _id }
+    if (auth.user.role === 'branch') filter.branch = auth.user.branch?.toString()
+    const w: any = await Warranty.findOne(filter)
     if (!w) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (status && ['Active', 'Expired', 'Void', 'Pending'].includes(status)) w.status = status
     if (notes !== undefined) w.notes = notes
@@ -127,12 +162,14 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     await connectDB()
-    const auth: any = await requireAdmin()
+    const auth: any = await requireAuth()
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    await Warranty.findByIdAndDelete(id)
+    const filter: any = { _id: id }
+    if (auth.user.role === 'branch') filter.branch = auth.user.branch?.toString()
+    await Warranty.findOneAndDelete(filter)
     return NextResponse.json({ message: 'Deleted' }, { status: 200 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })

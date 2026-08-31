@@ -7,6 +7,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    branch: {
+      type: String,
+      default: '',
+      index: true,
+    },
     user: {
       type: String,
       required: true,

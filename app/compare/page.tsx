@@ -1,11 +1,13 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { GitCompare, X, Smartphone, Trash2, Star, Plus } from 'lucide-react'
+import { GitCompare, X, Smartphone, Trash2, Star, Plus, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCompare } from '@/hooks/useCompare'
 import { useGetStoreProductQuery } from '@/store/action/storeAction'
+import { useBranch } from '@/hooks/useBranch'
+import { CurrentBranchBanner } from '@/components/branch/branch-selector'
 
 const SPEC_ROWS: Array<{ label: string; get: (p: any) => string }> = [
   { label: 'Price', get: (p) => `₱${Number(p.price).toLocaleString()}` },
@@ -27,11 +29,23 @@ const SPEC_ROWS: Array<{ label: string; get: (p: any) => string }> = [
 
 export default function ComparePage() {
   const { ids, remove, clear } = useCompare()
-  const { data } = useGetStoreProductQuery({})
+  const { currentId: branchId, currentBranch } = useBranch()
+  const { data } = useGetStoreProductQuery(branchId ? { branchId } : {})
   const products = useMemo(() => {
     const all = (data?.product || []) as any[]
     return ids.map(id => all.find((p: any) => p._id === id)).filter(Boolean)
   }, [ids, data])
+
+  // Prune compare ids that are no longer available at the selected branch
+  useEffect(() => {
+    if (!data?.product) return
+    const availableIds = new Set((data.product as any[]).map((p: any) => p._id))
+    const invalid = ids.filter(id => !availableIds.has(id))
+    if (invalid.length > 0) {
+      invalid.forEach(id => remove(id))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, data])
 
   const getDiff = (values: string[]) => {
     const uniq = new Set(values)
@@ -40,11 +54,12 @@ export default function ComparePage() {
 
   return (
     <div className="w-full bg-[#FCFCFC] min-h-[calc(100vh-64px)]">
+      <CurrentBranchBanner />
       <div className="mx-auto max-w-[1200px] px-6 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] flex items-center gap-2"><GitCompare className="h-5 w-5" /> Compare — 2 to 4 phones</h1>
-            <p className="text-[12.5px] text-[#6E6E73]">Highlighting meaningful differences. Horizontal scroll on mobile. {ids.length}/4 selected.</p>
+            <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] flex items-center gap-2"><GitCompare className="h-5 w-5" /> Compare — 2 to 4 phones {currentBranch && <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF7ED] border border-orange-200 px-2.5 py-1 text-[11px] font-medium text-[#9A3412]"><MapPin className="h-3 w-3" /> {currentBranch.name}</span>}</h1>
+            <p className="text-[12.5px] text-[#6E6E73]">{currentBranch ? `${currentBranch.name} • ${currentBranch.address} — only devices stocked at this branch are comparable. ` : 'Select a branch for accurate comparison — '}Highlighting meaningful differences. Horizontal scroll on mobile. {ids.length}/4 selected.</p>
           </div>
           <div className="flex gap-2">
             {ids.length > 0 && <Button variant="outline" size="sm" onClick={clear}><Trash2 className="h-3.5 w-3.5 mr-1" /> Clear</Button>}
