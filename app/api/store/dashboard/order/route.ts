@@ -5,6 +5,7 @@ import User from '@/lib/model/user.model'
 import Activity from '@/lib/model/activity.model'
 import { getServerSession } from 'next-auth'
 import { nextauthOptions } from '@/lib/next-auth-option'
+import { autoRegisterWarrantiesForOrder } from '@/lib/warranty'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -28,6 +29,7 @@ export async function PUT(req: NextRequest) {
       // Admin owns orders via branch merchants — allow if order belongs to any branch managed by admin
       // Admin can manage all, so no merchant check needed; keep permissive for admin
     }
+    const previousStatus = order.status
     order.status = status
     await order.save()
     await Activity.create({
@@ -37,7 +39,18 @@ export async function PUT(req: NextRequest) {
       action: 'order_status_updated',
       detail: `Order ${orderId} → ${status}`,
     })
-    return NextResponse.json({ message: 'Status updated', order }, { status: 200 })
+
+    // Auto warranty registration when order is delivered (POS + online)
+    let warranties: any[] = []
+    if (status === 'Delivered' && previousStatus !== 'Delivered') {
+      try {
+        warranties = await autoRegisterWarrantiesForOrder(order)
+      } catch (e) {
+        console.log('auto warranty error', (e as any).message)
+      }
+    }
+
+    return NextResponse.json({ message: 'Status updated', order, warrantiesCreated: warranties.length, warranties }, { status: 200 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

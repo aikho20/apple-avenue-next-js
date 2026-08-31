@@ -17,7 +17,15 @@ export const dashboardApi = apiSlice.injectEndpoints({
         body: { orderId, status },
       }),
     }),
+    getDashboardStats: builder.query({
+      query: ({ branchId, range }: { branchId?: string; range?: string } = {}) => ({
+        url: '/api/store/dashboard/stats',
+        method: 'POST',
+        body: { branchId, range },
+      }),
+      providesTags: [{ type: 'Store' as const }],
+    }),
   }),
 })
 
-export const { useGetDashboardOrderQuery, useUpdateOrderStatusMutation } = dashboardApi
+export const { useGetDashboardOrderQuery, useUpdateOrderStatusMutation, useGetDashboardStatsQuery } = dashboardApi
