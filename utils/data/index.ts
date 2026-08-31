@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Package,
   Boxes,
+  Receipt,
 } from 'lucide-react'
 
 export const DASHBOARD_MENU = [
@@ -58,6 +59,11 @@ export const DASHBOARD_MENU = [
   {
     title: 'Sales',
     items: [
+      {
+        title: 'POS',
+        route: '/dashboard/pos',
+        icon: Receipt,
+      },
       {
         title: 'Orders',
         route: '/dashboard/orders',
